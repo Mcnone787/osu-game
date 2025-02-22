@@ -21,12 +21,14 @@
   .osu-button {
     @apply font-game flex justify-center items-center relative
     w-[520px] h-[500px] rounded-full
-    bg-gradient-radial from-pink-500 via-purple-500 to-purple-600
-    border-[20px] border-white text-white
+    bg-purple-900
+    border-[20px] border-purple-900
+    text-white
     text-8xl font-bold uppercase cursor-pointer
     shadow-[0_0_20px_rgba(255,255,255,0.6)]
     transition-all duration-300
-    hover:scale-110 hover:shadow-[0_0_30px_rgba(255,255,255,0.8)];
+    hover:scale-110 hover:shadow-[0_0_30px_rgba(255,255,255,0.8)]
+    hover:bg-purple-900 hover:border-purple-500;
     animation: solidPulse 0.4s infinite;
   }
 

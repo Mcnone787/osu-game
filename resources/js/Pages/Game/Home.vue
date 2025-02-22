@@ -154,15 +154,11 @@ const handleClick = async () => {
 
 .menu-item-alt {
   @apply px-12 py-3
-         rounded-r-lg text-center text-white font-game text-2xl
+         rounded-lg text-center text-white font-game text-2xl
          items-center justify-center
-         border-l-4 border-transparent
-         hover:border-pink-500;
-  background: linear-gradient(
-    to right,
-    rgba(126, 34, 206, 0.9),
-    rgba(219, 39, 119, 0.8)
-  );
+         bg-purple-800/30
+         border border-purple-500/40
+         transition-all duration-300;
   transition: width 0.03s linear,
               opacity 0.15s ease,
               transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -170,11 +166,9 @@ const handleClick = async () => {
 }
 
 .menu-item-alt:hover {
-  background: linear-gradient(
-    to right,
-    rgba(147, 51, 234, 0.9),
-    rgba(236, 72, 153, 0.8)
-  );
+  @apply bg-purple-600/40 border-pink-400/60
+         transform scale-[1.01]
+         shadow-[0_0_15px_rgba(168,85,247,0.3)];
 }
 
 .menu-item-alt span {
