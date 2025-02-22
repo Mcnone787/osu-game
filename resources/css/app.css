@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+    font-family: 'GameFont';
+    src: url('../fonts/Aller_Bd.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@layer components {
+  .bg-dark {
+    @apply bg-[#0e0e0e] bg-[url('../imgs/default2.jpg')];
+  }
+
+  .font-game {
+    font-family: 'GameFont', sans-serif;
+  }
+
+  .osu-button {
+    @apply font-game flex justify-center items-center relative
+    w-[470px] h-[450px] rounded-full
+    bg-gradient-radial from-pink-400 via-pink-500 to-pink-600
+    border-[20px] border-white text-white
+    text-8xl font-bold uppercase cursor-pointer
+    shadow-[0_0_20px_rgba(255,255,255,0.6)]
+    transition-all duration-300
+    hover:scale-110 hover:shadow-[0_0_30px_rgba(255,255,255,0.8)];
+    animation: solidPulse 0.4s infinite;
+  }
+
+  .osu-button::before,
+  .osu-button::after {
+    @apply content-[''] absolute top-1/2 left-1/2 w-full h-full
+    rounded-full -translate-x-1/2 -translate-y-1/2;
+    animation: floaty 6s linear infinite;
+  }
+
+  .osu-button::after {
+    animation-delay: -3s;
+  }
+
+  .menu-container {
+    @apply absolute left-[90%] top-1/2 -translate-y-1/2
+    flex flex-col gap-3 min-w-[300px];
+  }
+
+  .menu-item {
+    @apply bg-purple-800 px-8 py-4 
+    rounded-r-lg text-center text-white
+    transform transition-all duration-300
+    hover:bg-gradient-radial hover:from-pink-400 hover:to-pink-600
+    hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)];
+  }
+}
+
+@keyframes floaty {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 
+      0 0 0 0 rgba(255, 255, 255, 0.5),
+      0 0 0 15px rgba(255, 255, 255, 0.3),
+      0 0 0 30px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.05);
+    box-shadow: 
+      0 0 0 5px rgba(255, 255, 255, 0.5),
+      0 0 0 20px rgba(255, 255, 255, 0.3),
+      0 0 0 35px rgba(255, 255, 255, 0.1);
+  }
+}
+
+@keyframes solidPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
