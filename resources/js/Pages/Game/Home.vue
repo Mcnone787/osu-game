@@ -15,35 +15,41 @@
 
     <!-- Main Content -->
     <main class="flex-1 flex justify-center items-center p-5">
-      <div class="relative flex items-center">
+      <div class="relative flex items-center" 
+           :class="{ '-translate-x-52 transition-transform duration-300': isMenuOpen }">
         <button 
-          @click="toggleMenu"
+          @click="handleClick"
+          :disabled="isAnimating"
           class="osu-button z-10"
         >
-          OSU!
+          BEAT!
         </button>
 
         <!-- Menú actualizado -->
-        <Transition
-          enter-active-class="transition ease-out duration-200"
-          enter-from-class="opacity-0 translate-x-4"
-          enter-to-class="opacity-100 translate-x-0"
-          leave-active-class="transition ease-in duration-150"
-          leave-from-class="opacity-100 translate-x-0"
-          leave-to-class="opacity-0 translate-x-4"
+        <div 
+          v-show="isMenuOpen"
+          class="menu-container-alt"
         >
-          <div 
-            v-show="isMenuOpen"
-            class="menu-container"
+          <Link 
+            v-for="(item, index) in menuItems"
+            :key="index"
+            :href="item.href" 
+            class="menu-item-alt opacity-0"
+            :class="{ 
+              'opacity-100': itemVisible[index],
+              'translate-y-0': itemVisible[index],
+              'translate-y-2': !itemVisible[index]
+            }"
+            :style="{ 
+              width: itemWidths[index] + 'px',
+              display: itemWidths[index] === 0 ? 'none' : 'flex'
+            }"
           >
-            <Link 
-              href="/game/play" 
-              class="menu-item"
-            >
-              <span class="font-game text-xl font-bold">Play</span>
-            </Link>
-          </div>
-        </Transition>
+            <span class="relative z-10" :class="{ 'opacity-0': itemWidths[index] < 150 }">
+              {{ item.text }}
+            </span>
+          </Link>
+        </div>
       </div>
     </main>
 
@@ -61,10 +67,9 @@ import { ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 
 const isMenuOpen = ref(false)
-
-const toggleMenu = () => {
-  isMenuOpen.value = !isMenuOpen.value
-}
+const isAnimating = ref(false)
+const itemVisible = ref([false, false, false, false])
+const itemWidths = ref([0, 0, 0, 0])
 
 const controls = [
   { icon: 'ChevronLeftIcon' },
@@ -72,4 +77,116 @@ const controls = [
   { icon: 'PlayIcon' },
   { icon: 'ChevronRightIcon' }
 ]
-</script> 
+
+const menuItems = [
+  { text: 'Play Now', href: '/game/play' },
+  { text: 'Rankings', href: '/game/rankings' },
+  { text: 'Profile', href: '/game/profile' },
+  { text: 'Exit', href: '/game/exit' }
+]
+
+const resetStates = () => {
+  itemVisible.value = [false, false, false, false]
+  itemWidths.value = [0, 0, 0, 0]
+}
+
+const animateItem = async (index) => {
+  itemWidths.value[index] = 0
+  await new Promise(resolve => requestAnimationFrame(resolve))
+  itemVisible.value[index] = true
+  
+  for (let width = 0; width <= 400; width += 25) {
+    if (!isMenuOpen.value) break
+    itemWidths.value[index] = width
+    await new Promise(resolve => requestAnimationFrame(resolve))
+  }
+  
+  if (isMenuOpen.value) {
+    itemWidths.value[index] = 400
+  }
+}
+
+const animateMenuItems = async () => {
+  for (let i = 0; i < menuItems.length; i++) {
+    if (!isMenuOpen.value) break
+    await animateItem(i)
+    await new Promise(resolve => setTimeout(resolve, 20))
+  }
+}
+
+const closeMenu = async () => {
+  for (let i = menuItems.length - 1; i >= 0; i--) {
+    for (let width = itemWidths.value[i]; width >= 0; width -= 25) {
+      itemWidths.value[i] = width
+      await new Promise(resolve => requestAnimationFrame(resolve))
+    }
+    itemWidths.value[i] = 0
+    itemVisible.value[i] = false
+  }
+  
+  await new Promise(resolve => setTimeout(resolve, 50))
+  isMenuOpen.value = false
+}
+
+const handleClick = async () => {
+  if (isAnimating.value) return
+  
+  isAnimating.value = true
+  try {
+    if (!isMenuOpen.value) {
+      isMenuOpen.value = true
+      resetStates()
+      await animateMenuItems()
+    } else {
+      await closeMenu()
+    }
+  } finally {
+    isAnimating.value = false
+  }
+}
+</script>
+
+<style scoped>
+.menu-container-alt {
+  @apply absolute left-[85%] top-1/2 -translate-y-1/2
+         flex flex-col gap-6;
+}
+
+.menu-item-alt {
+  @apply px-12 py-3
+         rounded-r-lg text-center text-white font-game text-2xl
+         items-center justify-center
+         border-l-4 border-transparent
+         hover:border-pink-500;
+  background: linear-gradient(
+    to right,
+    rgba(126, 34, 206, 0.9),
+    rgba(219, 39, 119, 0.8)
+  );
+  transition: width 0.03s linear,
+              opacity 0.15s ease,
+              transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+.menu-item-alt:hover {
+  background: linear-gradient(
+    to right,
+    rgba(147, 51, 234, 0.9),
+    rgba(236, 72, 153, 0.8)
+  );
+}
+
+.menu-item-alt span {
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.relative {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.osu-button:disabled {
+  cursor: pointer;
+}
+</style> 

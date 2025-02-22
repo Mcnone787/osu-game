@@ -1,5 +1,5 @@
 <template>
-  <div class="relative">
+  <div class="relative w-fit" ref="dropdownRef">
     <button 
       @click="isOpen = !isOpen"
       class="flex items-center justify-between w-64 px-4 py-2 
@@ -50,6 +50,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue'])
 const isOpen = ref(false)
+const dropdownRef = ref(null)
 
 const selectOption = (option) => {
   emit('update:modelValue', option)
@@ -57,7 +58,7 @@ const selectOption = (option) => {
 }
 
 const closeDropdown = (e) => {
-  if (!e.target.closest('.relative')) {
+  if (dropdownRef.value && !dropdownRef.value.contains(e.target)) {
     isOpen.value = false
   }
 }
