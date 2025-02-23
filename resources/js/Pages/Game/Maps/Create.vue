@@ -21,7 +21,8 @@
     <!-- Editor principal -->
     <div class="flex-1 grid grid-cols-12 h-[calc(100vh-5rem)]">
       <!-- Timeline y carriles -->
-      <div class="col-span-9 bg-black/80 relative">
+      <div class="col-span-9 bg-black/80 relative"
+           @mousemove="updateMousePosition">
         <!-- Receptores fijos en la parte inferior -->
         <div class="fixed-receptors">
           <div class="flex">
@@ -86,11 +87,16 @@
                      :key="note.id"
                      :data-note-id="note.id"
                      class="note-wrapper"
-                     :class="{ 'selected': selection.selectedNotes.includes(note) }"
+                     :class="{ 
+                       'selected': selection.selectedNotes.includes(note),
+                       'dragging': dragState.isDragging && dragState.selectedNotes.includes(note)
+                     }"
                      :style="{ 
                        top: `${note.time * pixelsPerBeat}px`,
+                       cursor: selection.selectedNotes.includes(note) ? 'move' : 'pointer'
                      }"
-                     @click="(e) => handleNoteClick(e, note)">
+                     @click="(e) => handleNoteClick(e, note)"
+                     @mousedown="(e) => startNoteDrag(e, note)">
                   <div class="note-block"></div>
                 </div>
               </div>
@@ -404,6 +410,21 @@ const clipboard = ref([])
 
 // Añadir referencia al sistema de notificaciones
 const notificationSystem = ref(null)
+
+// Estado para el arrastre de notas
+const dragState = ref({
+  isDragging: false,
+  startY: 0,
+  selectedNotes: [],
+  originalPositions: []
+})
+
+// Añadir variable para el timeout
+let clickTimeout = null
+const CLICK_DELAY = 150 // milisegundos de delay
+
+// Añadir ref para la posición del mouse
+const mousePosition = ref({ x: 0, y: 0 })
 
 function handleAudioUpload(event) {
   const file = event.target.files[0]
@@ -815,42 +836,121 @@ const updateSelectedNotes = () => {
   const start = Math.min(selection.value.startTime, selection.value.endTime)
   const end = Math.max(selection.value.startTime, selection.value.endTime)
 
-  selection.value.selectedNotes = notes.value.filter(note => 
+  // Mantener las notas ya seleccionadas si se presiona Ctrl
+  const currentSelection = selection.value.selectedNotes
+  const newSelection = notes.value.filter(note => 
     note.time >= start && note.time <= end
   )
+
+  // Combinar selecciones si se presiona Ctrl
+  selection.value.selectedNotes = [...new Set([...currentSelection, ...newSelection])]
 }
 
-// Modificar el click handler de las notas
+// Modificar handleNoteClick
 const handleNoteClick = (event, note) => {
-  event.stopPropagation() // Prevenir propagación del evento
+  event.stopPropagation()
   
-  if (event.ctrlKey) {
-    // Si es ctrl+click, toggle la selección de la nota
-    const index = selection.value.selectedNotes.indexOf(note)
-    if (index === -1) {
-      selection.value.selectedNotes.push(note)
+  if (isDragging.value) {
+    isDragging.value = false
+    return
+  }
+
+  if (clickTimeout) {
+    clearTimeout(clickTimeout)
+  }
+
+  clickTimeout = setTimeout(() => {
+    if (event.ctrlKey) {
+      // Verificar si ya hay notas seleccionadas
+      if (selection.value.selectedNotes.length > 0) {
+        // Solo permitir seleccionar notas del mismo carril
+        const firstNote = selection.value.selectedNotes[0]
+        if (note.lane !== firstNote.lane) {
+          showNotification('Solo puedes seleccionar notas del mismo carril', 'error')
+          return
+        }
+      }
+
+      const index = selection.value.selectedNotes.findIndex(n => n.id === note.id)
+      if (index === -1) {
+        selection.value.selectedNotes.push(note)
+      } else {
+        selection.value.selectedNotes.splice(index, 1)
+      }
     } else {
-      selection.value.selectedNotes.splice(index, 1)
+      // Click normal (sin Ctrl) siempre elimina la nota
+      removeNote(note)
+      // Limpiar la selección si la nota eliminada estaba seleccionada
+      selection.value.selectedNotes = selection.value.selectedNotes.filter(n => n.id !== note.id)
     }
-  } else {
-    // Click normal elimina la nota
-    removeNote(note)
+  }, CLICK_DELAY)
+}
+
+// Funciones para el arrastre de notas
+const startNoteDrag = (event, note) => {
+  event.stopPropagation()
+  
+  const selectedNotes = selection.value.selectedNotes.includes(note) 
+    ? selection.value.selectedNotes 
+    : [note]
+
+  dragState.value = {
+    isDragging: true,
+    startY: event.clientY,
+    selectedNotes,
+    originalPositions: selectedNotes.map(n => ({ id: n.id, time: n.time }))
+  }
+
+  document.addEventListener('mousemove', handleNoteDrag)
+  document.addEventListener('mouseup', stopNoteDrag)
+}
+
+const handleNoteDrag = (event) => {
+  if (!dragState.value.isDragging) return
+
+  const deltaY = event.clientY - dragState.value.startY
+  const timeDelta = deltaY / pixelsPerBeat.value
+
+  dragState.value.selectedNotes.forEach((note, index) => {
+    const originalTime = dragState.value.originalPositions[index].time
+    const newTime = snapToGrid(originalTime + timeDelta)
+    if (newTime >= 0 && newTime <= duration.value) {
+      note.time = newTime
+    }
+  })
+}
+
+const stopNoteDrag = () => {
+  dragState.value.isDragging = false
+  document.removeEventListener('mousemove', handleNoteDrag)
+  document.removeEventListener('mouseup', stopNoteDrag)
+}
+
+// Añadir función para actualizar la posición del mouse
+const updateMousePosition = (event) => {
+  const lanesContainer = document.querySelector('.col-span-9')
+  if (lanesContainer) {
+    const rect = lanesContainer.getBoundingClientRect()
+    mousePosition.value = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top
+    }
   }
 }
 
-// Mejorar el handleKeyboard para dar más feedback
+// Modificar el handleKeyboard para usar la posición guardada
 const handleKeyboard = (event) => {
   if (!event.ctrlKey) return
 
   if (event.key.toLowerCase() === COPY_KEY) {
-    // Copiar notas seleccionadas
     if (selection.value.selectedNotes.length > 0) {
       const firstNoteTime = Math.min(...selection.value.selectedNotes.map(n => n.time))
       clipboard.value = selection.value.selectedNotes.map(note => ({
         ...note,
-        timeOffset: note.time - firstNoteTime
+        timeOffset: note.time - firstNoteTime,
+        originalLane: note.lane
       }))
-      showNotification(`Copiadas ${selection.value.selectedNotes.length} notas`, 'success')
+      showNotification(`Copiadas ${selection.value.selectedNotes.length} notas del carril ${clipboard.value[0].originalLane + 1}`, 'success')
     } else {
       showNotification('No hay notas seleccionadas para copiar', 'error')
     }
@@ -858,30 +958,61 @@ const handleKeyboard = (event) => {
 
   if (event.key.toLowerCase() === PASTE_KEY) {
     if (clipboard.value.length > 0) {
-      // Pegar notas en la posición actual del playhead
-      const pasteTime = currentTime.value
-      const newNotes = clipboard.value.map(note => ({
-        id: Date.now() + Math.random(),
-        lane: note.lane,
-        time: pasteTime + note.timeOffset
-      }))
-      
-      notes.value.push(...newNotes)
-      showNotification(`Pegadas ${newNotes.length} notas en ${formatTime(pasteTime)}`, 'success')
+      const lanesContainer = document.querySelector('.col-span-9')
+      if (!lanesContainer) return
+
+      const rect = lanesContainer.getBoundingClientRect()
+      const laneWidth = rect.width / 4
+      const targetLane = Math.floor(mousePosition.value.x / laneWidth)
+
+      console.log('Debug - Pegado:', {
+        mouseX: mousePosition.value.x,
+        editorWidth: rect.width,
+        laneWidth,
+        targetLane,
+        currentTime: currentTime.value
+      })
+
+      if (targetLane >= 0 && targetLane < 4) {
+        const pasteTime = currentTime.value
+        const newNotes = clipboard.value.map(note => ({
+          id: Date.now() + Math.random(),
+          lane: targetLane,
+          time: pasteTime + note.timeOffset
+        }))
+        
+        notes.value.push(...newNotes)
+        notes.value.sort((a, b) => a.time - b.time)
+        
+        showNotification(
+          `Pegadas ${newNotes.length} notas en carril ${targetLane + 1}`, 
+          'success'
+        )
+      } else {
+        showNotification('Coloca el cursor sobre un carril para pegar', 'error')
+      }
     } else {
       showNotification('No hay notas copiadas para pegar', 'error')
     }
   }
 
   if (event.key.toLowerCase() === SELECT_KEY) {
-    // Seleccionar todas las notas visibles
-    selection.value = {
-      active: true,
-      startTime: 0,
-      endTime: duration.value,
-      selectedNotes: [...notes.value]
+    // Seleccionar todas las notas del carril actual
+    const editorContainer = document.querySelector('.editor-container')
+    const lanes = document.querySelectorAll('.lane-column')
+    const mouseX = event.clientX - editorContainer.getBoundingClientRect().left
+    const laneWidth = editorContainer.clientWidth / 4
+    const currentLane = Math.floor(mouseX / laneWidth)
+
+    if (currentLane >= 0 && currentLane < 4) {
+      selection.value = {
+        active: true,
+        startTime: 0,
+        endTime: duration.value,
+        selectedNotes: notes.value.filter(note => note.lane === currentLane)
+      }
+      showNotification(`Seleccionadas ${selection.value.selectedNotes.length} notas del carril ${currentLane + 1}`, 'success')
     }
-    showNotification(`Seleccionadas ${notes.value.length} notas`, 'success')
   }
 }
 
@@ -894,13 +1025,19 @@ const shortcuts = [
   { key: 'Ctrl + A', description: 'Seleccionar todo' }
 ]
 
-// Añadir event listeners
+// Añadir event listeners en onMounted
 onMounted(() => {
   window.addEventListener('keydown', handleKeyboard)
+  window.addEventListener('mousemove', updateMousePosition)
 })
 
+// Limpiar event listeners en onUnmounted
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyboard)
+  window.removeEventListener('mousemove', updateMousePosition)
+  if (clickTimeout) {
+    clearTimeout(clickTimeout)
+  }
 })
 </script>
 
@@ -1024,9 +1161,9 @@ onUnmounted(() => {
 }
 
 .note-wrapper {
-  @apply absolute w-full;
+  @apply absolute w-full transition-transform;
   transform: translateY(-50%);
-  user-select: none; /* Prevenir selección de texto */
+  user-select: none;
 }
 
 .note-wrapper.conflicting {
@@ -1045,11 +1182,12 @@ onUnmounted(() => {
 }
 
 .note-block {
-  @apply mx-auto w-4/5 
-         bg-gradient-to-r from-pink-500/60 to-purple-500/60
-         border-2 border-pink-500 rounded-lg
-         transition-all duration-200;
-  height: v-bind(noteHeight + 'px');
+  @apply w-full h-8 
+         bg-gradient-to-r from-purple-600 to-pink-500
+         border-2 border-purple-400/50
+         rounded-md
+         shadow-[0_0_10px_rgba(168,85,247,0.4)]
+         transition-all duration-150;
 }
 
 /* Efecto hover */
@@ -1305,5 +1443,9 @@ onUnmounted(() => {
 .note-wrapper.selected .note-block {
   @apply ring-2 ring-pink-500 ring-offset-1 ring-offset-purple-900
          shadow-[0_0_10px_rgba(236,72,153,0.5)];
+}
+
+.note-wrapper.dragging .note-block {
+  @apply scale-105;
 }
 </style> 
