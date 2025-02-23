@@ -94,6 +94,9 @@ const submit = () => {
                 >
                     Log in
                 </PrimaryButton>
+                <Link :href="route('register')" class="ms-4">
+                    Don't have an account? Register
+                </Link>
             </div>
         </form>
     </GuestLayout>

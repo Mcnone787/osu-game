@@ -5,6 +5,7 @@ use App\Http\Controllers\GameController;
 use App\Http\Controllers\MapController; // Nuevo controlador
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\Auth\GameAuthController;
 
 Route::get('/', [GameController::class, 'index'])->name('game.home');
 Route::get('/game/play', [GameController::class, 'play'])->name('game.play');
@@ -20,5 +21,9 @@ Route::middleware(['auth'])->group(function () {
     // Ruta para subir el archivo de audio
     Route::post('/maps/upload-audio', [MapController::class, 'uploadAudio'])->name('maps.upload-audio');
 });
+
+Route::post('/game/login', [GameAuthController::class, 'login'])->name('game.login');
+Route::post('/game/register', [GameAuthController::class, 'register'])->name('game.register');
+Route::post('/game/logout', [GameAuthController::class, 'logout'])->name('game.logout');
 
 require __DIR__.'/auth.php';
