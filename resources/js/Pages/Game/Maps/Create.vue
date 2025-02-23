@@ -39,7 +39,8 @@
         <div class="editor-container">
           <div v-if="audioLoaded" 
                class="relative"
-               :style="{ height: `${duration * pixelsPerBeat}px` }">
+               :style="{ height: `${duration * pixelsPerBeat}px` }"
+               @mousedown="handleSelection">
             <!-- Carriles para notas -->
             <div class="absolute inset-0 flex">
               <div v-for="i in 4" :key="i" 
@@ -85,10 +86,11 @@
                      :key="note.id"
                      :data-note-id="note.id"
                      class="note-wrapper"
+                     :class="{ 'selected': selection.selectedNotes.includes(note) }"
                      :style="{ 
                        top: `${note.time * pixelsPerBeat}px`,
                      }"
-                     @click.stop="removeNote(note)">
+                     @click="(e) => handleNoteClick(e, note)">
                   <div class="note-block"></div>
                 </div>
               </div>
@@ -97,6 +99,15 @@
             <!-- Playhead -->
             <div class="playhead" 
                  :style="{ top: `${currentTime * pixelsPerBeat}px` }">
+            </div>
+
+            <!-- Área de selección -->
+            <div v-if="selection.active && selection.startTime !== selection.endTime"
+                 class="selection-area"
+                 :style="{
+                   top: `${Math.min(selection.startTime, selection.endTime) * pixelsPerBeat}px`,
+                   height: `${Math.abs(selection.endTime - selection.startTime) * pixelsPerBeat}px`
+                 }">
             </div>
           </div>
           
@@ -307,15 +318,32 @@
 
     <!-- Spinner -->
     <Spinner v-if="isSaving" message="Guardando mapa..." />
+
+    <!-- Añadir componente de notificaciones -->
+    <NotificationSystem ref="notificationSystem" />
+
+    <!-- Añadir información de atajos -->
+    <div class="fixed bottom-4 right-4 bg-black/80 p-4 rounded-lg border border-purple-500/30">
+      <h3 class="text-white font-game mb-2">Atajos de teclado</h3>
+      <ul class="space-y-1">
+        <li v-for="shortcut in shortcuts" 
+            :key="shortcut.key" 
+            class="text-sm">
+          <span class="text-purple-400">{{ shortcut.key }}</span>
+          <span class="text-white/70">: {{ shortcut.description }}</span>
+        </li>
+      </ul>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import axios from 'axios'
 import Spinner from '@/Components/Spinner.vue'
 import { router } from '@inertiajs/vue3'
 import GameHeader from '@/Components/GameHeader.vue'
+import NotificationSystem from '@/Components/NotificationSystem.vue'
 
 const audioLoaded = ref(false)
 const isPlaying = ref(false)
@@ -359,6 +387,23 @@ const progressPercentage = computed(() => {
 
 const notifications = ref([])
 const isSaving = ref(false)
+
+// Estado para la selección
+const selection = ref({
+  active: false,
+  startTime: null,
+  endTime: null,
+  selectedNotes: []
+})
+
+// Teclas para copiar/pegar
+const COPY_KEY = 'c'
+const PASTE_KEY = 'v'
+const SELECT_KEY = 'a'
+const clipboard = ref([])
+
+// Añadir referencia al sistema de notificaciones
+const notificationSystem = ref(null)
 
 function handleAudioUpload(event) {
   const file = event.target.files[0]
@@ -738,6 +783,125 @@ function showNotification(message, type = 'success') {
     notifications.value = notifications.value.filter(n => n.id !== id)
   }, duration)
 }
+
+// Función para manejar la selección
+const handleSelection = (event) => {
+  if (!event.ctrlKey) return
+  
+  event.preventDefault() // Prevenir comportamiento por defecto
+  
+  const editorContainer = document.querySelector('.editor-container')
+  const rect = editorContainer.getBoundingClientRect()
+  const clickY = event.clientY - rect.top + editorContainer.scrollTop
+  const timeAtClick = clickY / pixelsPerBeat.value
+
+  if (event.shiftKey && selection.value.startTime !== null) {
+    // Extender selección
+    selection.value.endTime = timeAtClick
+    updateSelectedNotes()
+  } else {
+    // Nueva selección
+    selection.value.active = true
+    selection.value.startTime = timeAtClick
+    selection.value.endTime = timeAtClick
+    updateSelectedNotes()
+  }
+}
+
+// Actualizar notas seleccionadas
+const updateSelectedNotes = () => {
+  if (!selection.value.startTime || !selection.value.endTime) return
+
+  const start = Math.min(selection.value.startTime, selection.value.endTime)
+  const end = Math.max(selection.value.startTime, selection.value.endTime)
+
+  selection.value.selectedNotes = notes.value.filter(note => 
+    note.time >= start && note.time <= end
+  )
+}
+
+// Modificar el click handler de las notas
+const handleNoteClick = (event, note) => {
+  event.stopPropagation() // Prevenir propagación del evento
+  
+  if (event.ctrlKey) {
+    // Si es ctrl+click, toggle la selección de la nota
+    const index = selection.value.selectedNotes.indexOf(note)
+    if (index === -1) {
+      selection.value.selectedNotes.push(note)
+    } else {
+      selection.value.selectedNotes.splice(index, 1)
+    }
+  } else {
+    // Click normal elimina la nota
+    removeNote(note)
+  }
+}
+
+// Mejorar el handleKeyboard para dar más feedback
+const handleKeyboard = (event) => {
+  if (!event.ctrlKey) return
+
+  if (event.key.toLowerCase() === COPY_KEY) {
+    // Copiar notas seleccionadas
+    if (selection.value.selectedNotes.length > 0) {
+      const firstNoteTime = Math.min(...selection.value.selectedNotes.map(n => n.time))
+      clipboard.value = selection.value.selectedNotes.map(note => ({
+        ...note,
+        timeOffset: note.time - firstNoteTime
+      }))
+      showNotification(`Copiadas ${selection.value.selectedNotes.length} notas`, 'success')
+    } else {
+      showNotification('No hay notas seleccionadas para copiar', 'error')
+    }
+  }
+
+  if (event.key.toLowerCase() === PASTE_KEY) {
+    if (clipboard.value.length > 0) {
+      // Pegar notas en la posición actual del playhead
+      const pasteTime = currentTime.value
+      const newNotes = clipboard.value.map(note => ({
+        id: Date.now() + Math.random(),
+        lane: note.lane,
+        time: pasteTime + note.timeOffset
+      }))
+      
+      notes.value.push(...newNotes)
+      showNotification(`Pegadas ${newNotes.length} notas en ${formatTime(pasteTime)}`, 'success')
+    } else {
+      showNotification('No hay notas copiadas para pegar', 'error')
+    }
+  }
+
+  if (event.key.toLowerCase() === SELECT_KEY) {
+    // Seleccionar todas las notas visibles
+    selection.value = {
+      active: true,
+      startTime: 0,
+      endTime: duration.value,
+      selectedNotes: [...notes.value]
+    }
+    showNotification(`Seleccionadas ${notes.value.length} notas`, 'success')
+  }
+}
+
+// Añadir información de atajos de teclado
+const shortcuts = [
+  { key: 'Ctrl + Click', description: 'Iniciar selección' },
+  { key: 'Ctrl + Shift + Click', description: 'Extender selección' },
+  { key: 'Ctrl + C', description: 'Copiar notas seleccionadas' },
+  { key: 'Ctrl + V', description: 'Pegar notas' },
+  { key: 'Ctrl + A', description: 'Seleccionar todo' }
+]
+
+// Añadir event listeners
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyboard)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyboard)
+})
 </script>
 
 <style scoped>
@@ -819,7 +983,6 @@ function showNotification(message, type = 'success') {
 
 .lane-column {
   @apply relative flex-1 border-r border-purple-500/30 
-         hover:bg-purple-900/20 transition-colors
          cursor-crosshair;
   min-height: 100%;
 }
@@ -853,21 +1016,7 @@ function showNotification(message, type = 'success') {
 }
 
 /* Hacer las líneas más visibles en hover */
-.lane-column:hover .beat-line.main {
-  @apply bg-purple-500/60;
-}
 
-.lane-column:hover .beat-line.half {
-  @apply bg-purple-500/40;
-}
-
-.lane-column:hover .beat-line.quarter {
-  @apply bg-purple-500/25;
-}
-
-.lane-column:hover .beat-line.eighth {
-  @apply bg-purple-500/15;
-}
 
 /* Añadir transición suave */
 .beat-line {
@@ -877,6 +1026,7 @@ function showNotification(message, type = 'success') {
 .note-wrapper {
   @apply absolute w-full;
   transform: translateY(-50%);
+  user-select: none; /* Prevenir selección de texto */
 }
 
 .note-wrapper.conflicting {
@@ -1144,5 +1294,16 @@ function showNotification(message, type = 'success') {
 
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+.selection-area {
+  @apply absolute left-0 right-0
+         bg-purple-500/20 border border-purple-500/40
+         pointer-events-none z-10;
+}
+
+.note-wrapper.selected .note-block {
+  @apply ring-2 ring-pink-500 ring-offset-1 ring-offset-purple-900
+         shadow-[0_0_10px_rgba(236,72,153,0.5)];
 }
 </style> 
