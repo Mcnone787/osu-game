@@ -36,12 +36,7 @@ class MapController extends Controller
 
     public function create()
     {
-        return Inertia::render('Game/Maps/Index', [
-            'initialMaps' => Map::with('user')
-                ->orderBy('created_at', 'desc')
-                ->paginate(5)
-                ->items()
-        ]);
+        return Inertia::render('Game/Maps/Create');
     }
 
     public function store(Request $request)
