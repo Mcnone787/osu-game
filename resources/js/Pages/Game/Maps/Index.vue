@@ -28,7 +28,7 @@
       <!-- Main content -->
       <div class="flex-1 container mx-auto p-8">
         <div class="grid gap-4">
-          <div v-for="map in maps.data" :key="map.id" 
+          <div v-for="map in mapsList" :key="map.id" 
                class="map-item group">
             <div class="flex items-center gap-6">
               <!-- Thumbnail/Preview -->
@@ -97,21 +97,68 @@
           </div>
         </div>
   
-        <!-- Paginación -->
-        <div class="mt-8">
-          <Pagination :links="maps.links" />
+        <!-- Loading y End States -->
+        <div class="mt-8 text-center">
+          <!-- Spinner mientras carga -->
+          <div v-if="isLoading" 
+               class="inline-block animate-spin rounded-full h-8 w-8 border-4 
+                      border-purple-500 border-t-transparent">
+          </div>
+  
+          <!-- Mensaje de fin -->
+          <div v-if="reachedEnd && mapsList.length > 0" 
+               class="bg-purple-900/20 border border-purple-500/30 
+                      rounded-lg p-6 text-center">
+            <div class="text-purple-400 font-game text-xl mb-2">
+              🎮 ¡Has llegado al final!
+            </div>
+            <p class="text-gray-400">
+              Has visto todos los mapas disponibles
+            </p>
+          </div>
+  
+          <!-- Mensaje si no hay mapas -->
+          <div v-if="mapsList.length === 0" 
+               class="bg-purple-900/20 border border-purple-500/30 
+                      rounded-lg p-6 text-center">
+            <div class="text-purple-400 font-game text-xl mb-2">
+              ¡No hay mapas aún!
+            </div>
+            <p class="text-gray-400 mb-4">
+              Sé el primero en crear un mapa increíble
+            </p>
+            <Link 
+              :href="route('maps.create')"
+              class="inline-block bg-gradient-to-r from-pink-600/40 to-purple-600/40 
+                     hover:from-pink-500/60 hover:to-purple-500/60 
+                     text-white px-6 py-2 rounded-lg transition-all
+                     font-game border border-pink-500/30
+                     hover:scale-105 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]"
+            >
+              Crear Nuevo Mapa
+            </Link>
+          </div>
         </div>
       </div>
     </div>
   </template>
   
   <script setup>
+  import { ref, onMounted, onUnmounted } from 'vue'
   import { Link } from '@inertiajs/vue3'
-  import Pagination from '@/Components/Pagination.vue'
+  import axios from 'axios'
   
   const props = defineProps({
-    maps: Object
+    initialMaps: {
+      type: Array,
+      required: true
+    }
   })
+  
+  const currentPage = ref(1)
+  const isLoading = ref(false)
+  const reachedEnd = ref(false)
+  const mapsList = ref(props.initialMaps || [])
   
   function getDifficultyClass(difficulty) {
     const classes = {
@@ -128,6 +175,64 @@
       router.delete(route('maps.destroy', map))
     }
   }
+  
+  // Función para cargar más mapas
+  async function loadMoreMaps() {
+    if (isLoading.value || reachedEnd.value) return
+  
+    try {
+      isLoading.value = true
+      const nextPage = currentPage.value + 1
+  
+      const response = await axios.get(`/maps`, {
+        params: {
+          page: nextPage
+        }
+      })
+  
+      if (!response.data.has_more) {
+        reachedEnd.value = true
+      }
+  
+      if (response.data.data && response.data.data.length > 0) {
+        mapsList.value = [...mapsList.value, ...response.data.data]
+        currentPage.value = nextPage
+      } else {
+        reachedEnd.value = true
+      }
+  
+    } catch (error) {
+      console.error('Error cargando más mapas:', error)
+    } finally {
+      isLoading.value = false
+    }
+  }
+  
+  // Función para detectar scroll con debounce
+  let scrollTimeout
+  function handleScroll() {
+    if (scrollTimeout) clearTimeout(scrollTimeout)
+    
+    scrollTimeout = setTimeout(() => {
+      const scrollPosition = window.innerHeight + window.scrollY
+      const documentHeight = document.documentElement.scrollHeight
+      
+      // Cargar más cuando estemos cerca del final (100px antes)
+      if (scrollPosition >= documentHeight - 100 && !isLoading.value && !reachedEnd.value) {
+        loadMoreMaps()
+      }
+    }, 100)
+  }
+  
+  // Lifecycle hooks
+  onMounted(() => {
+    window.addEventListener('scroll', handleScroll)
+  })
+  
+  onUnmounted(() => {
+    window.removeEventListener('scroll', handleScroll)
+    if (scrollTimeout) clearTimeout(scrollTimeout)
+  })
   </script>
   
   <style scoped>
@@ -191,4 +296,32 @@
   .map-item:nth-child(3) { animation-delay: 0.2s; }
   .map-item:nth-child(4) { animation-delay: 0.25s; }
   .map-item:nth-child(5) { animation-delay: 0.3s; }
+  
+  /* Animaciones para los estados de carga y fin */
+  .map-item {
+    animation: fadeInUp 0.5s ease-out forwards;
+    opacity: 0;
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  /* Animación para el spinner */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .animate-spin {
+    animation: spin 1s linear infinite;
+  }
   </style> 

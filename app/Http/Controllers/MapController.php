@@ -12,18 +12,36 @@ class MapController extends Controller
 {
     public function index()
     {
-        $maps = Map::with('user')
-            ->latest()
-            ->paginate(10);
+        if (request()->wantsJson()) {
+            // Para peticiones AJAX (scroll infinito)
+            $maps = Map::with('user')
+                ->orderBy('created_at', 'desc')
+                ->paginate(5);
 
+            return response()->json([
+                'data' => $maps->items(),
+                'next_page_url' => $maps->nextPageUrl(),
+                'has_more' => $maps->hasMorePages()
+            ]);
+        }
+
+        // Para la carga inicial de la página
         return Inertia::render('Game/Maps/Index', [
-            'maps' => $maps
+            'initialMaps' => Map::with('user')
+                ->orderBy('created_at', 'desc')
+                ->paginate(5)
+                ->items()
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('Game/Maps/Create');
+        return Inertia::render('Game/Maps/Index', [
+            'initialMaps' => Map::with('user')
+                ->orderBy('created_at', 'desc')
+                ->paginate(5)
+                ->items()
+        ]);
     }
 
     public function store(Request $request)
