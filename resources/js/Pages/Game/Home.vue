@@ -80,7 +80,7 @@ const controls = [
 
 const menuItems = [
   { text: 'Play Now', href: '/game/play' },
-  { text: 'Rankings', href: '/game/rankings' },
+  { text: 'Add Map', href: '/maps' },
   { text: 'Profile', href: '/game/profile' },
   { text: 'Exit', href: '/game/exit' }
 ]
@@ -154,11 +154,11 @@ const handleClick = async () => {
 
 .menu-item-alt {
   @apply px-12 py-3
-         rounded-lg text-center text-white font-game text-2xl
+         rounded-lg text-center text-white text-2xl
          items-center justify-center
          bg-purple-800/30
-         border border-purple-500/40
-         transition-all duration-300;
+         border border-purple-500/40;
+  font-family: 'GameFont', sans-serif;
   transition: width 0.03s linear,
               opacity 0.15s ease,
               transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);

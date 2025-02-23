@@ -57,6 +57,12 @@
     hover:translate-x-4;
     animation: menuItemAppear 0.5s backwards;
   }
+
+  .key-hint {
+    @apply text-white font-game text-xl
+           bg-purple-900/50 px-4 py-1 rounded-lg
+           border border-purple-500/50;
+  }
 }
 
 @keyframes floaty {
