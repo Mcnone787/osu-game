@@ -312,12 +312,17 @@
         </div>
       </TransitionGroup>
     </div>
+
+    <!-- Spinner -->
+    <Spinner v-if="isSaving" message="Guardando mapa..." />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
 import axios from 'axios'
+import Spinner from '@/Components/Spinner.vue'
+import { router } from '@inertiajs/vue3'
 
 const audioLoaded = ref(false)
 const isPlaying = ref(false)
@@ -360,6 +365,7 @@ const progressPercentage = computed(() => {
 })
 
 const notifications = ref([])
+const isSaving = ref(false)
 
 function handleAudioUpload(event) {
   const file = event.target.files[0]
@@ -662,12 +668,10 @@ async function saveMap() {
       showNotification('Debes subir un archivo de audio', 'error')
       return
     }
-    if (!formData.value.bpm || formData.value.bpm < 1) {
-      showNotification('El BPM debe ser mayor a 0', 'error')
-      return
-    }
 
-    // Crear FormData para enviar
+    // Activar spinner
+    isSaving.value = true
+
     const submitData = new FormData()
     submitData.append('title', formData.value.title.trim())
     submitData.append('artist', formData.value.artist.trim())
@@ -676,31 +680,28 @@ async function saveMap() {
     submitData.append('audio', formData.value.audio)
     submitData.append('notes', JSON.stringify(notes.value))
 
-    // Añadir el token CSRF
-    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
-    if (token) {
-      submitData.append('_token', token)
-    }
-
     const response = await axios.post(route('maps.store'), submitData, {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Accept': 'application/json',
-        'X-CSRF-TOKEN': token
+        'Accept': 'application/json'
       }
     })
 
     if (response.data.success) {
       showNotification('¡Mapa guardado con éxito!', 'success')
+      
+      // Esperar un momento para que se vea la notificación
+      setTimeout(() => {
+        // Redirigir al listado de mapas
+        router.visit(route('maps.index'))
+      }, 1500)
     }
   } catch (error) {
     console.error('Error completo:', error)
     
-    // Manejar errores de validación
     if (error.response?.status === 422) {
       const errors = error.response.data.errors
       if (errors) {
-        // Mostrar el primer error de validación
         const firstError = Object.values(errors)[0][0]
         showNotification(firstError, 'error')
       } else {
@@ -712,6 +713,9 @@ async function saveMap() {
         'error'
       )
     }
+  } finally {
+    // Desactivar spinner
+    isSaving.value = false
   }
 }
 
@@ -1136,5 +1140,16 @@ function showNotification(message, type = 'success') {
 /* Asegurarnos de que todos los elementos que usaban font-game ahora usen la fuente directamente */
 .game-text {
   font-family: 'GameFont', sans-serif;
+}
+
+/* Animación para el spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style> 
