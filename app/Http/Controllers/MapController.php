@@ -41,42 +41,59 @@ class MapController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'artist' => 'required|string|max:255',
-            'bpm' => 'required|integer|min:1',
-            'difficulty' => 'required|in:easy,normal,hard,expert',
-            'audio' => 'required|file|mimes:mpga,mp3,wav,ogg|max:10240',
-            'notes' => 'required|json'
-        ]);
-
         try {
-            // Debugging
-            \Log::info('Iniciando subida de archivo');
-            \Log::info('Tipo de archivo: ' . $request->file('audio')->getMimeType());
-            \Log::info('Tamaño de archivo: ' . $request->file('audio')->getSize());
+            // Validación básica sin el archivo
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'artist' => 'required|string|max:255',
+                'bpm' => 'required|integer|min:1',
+                'difficulty' => 'required|in:easy,normal,hard,expert',
+                'notes' => 'required|json'
+            ]);
 
-            // Verificar que el archivo existe y es válido
-            if (!$request->hasFile('audio') || !$request->file('audio')->isValid()) {
-                throw new \Exception('El archivo de audio no es válido');
+            // Validación manual del archivo
+            if (!$request->hasFile('audio')) {
+                throw new \Exception('No se ha proporcionado ningún archivo de audio');
+            }
+
+            $file = $request->file('audio');
+            
+            // Obtener la extensión real del archivo
+            $extension = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+            
+            // Lista de extensiones permitidas
+            $allowedExtensions = ['mp3', 'wav', 'ogg'];
+            
+            // Validar extensión
+            if (!in_array($extension, $allowedExtensions)) {
+                throw new \Exception('El tipo de archivo no es válido. Se permiten: ' . implode(', ', $allowedExtensions));
+            }
+
+            // Verificar que el archivo es válido
+            if (!$file->isValid()) {
+                throw new \Exception('El archivo está corrupto o es inválido');
+            }
+
+            // Log de información del archivo
+            \Log::info('Información del archivo:', [
+                'nombre_original' => $file->getClientOriginalName(),
+                'extension' => $extension,
+                'mime_type' => $file->getMimeType(),
+                'tamaño' => $file->getSize()
+            ]);
+
+            // Generar nombre único para el archivo
+            $fileName = time() . '_' . \Str::random(10) . '.' . $extension;
+            
+            // Intentar guardar el archivo
+            $audioPath = $file->storeAs('maps/audio', $fileName, 'public');
+            
+            if (!$audioPath) {
+                throw new \Exception('Error al guardar el archivo de audio');
             }
 
             // Generar slug único
-            $slug = Str::slug($request->title . '-' . Str::random(8));
-
-            // Intentar guardar el archivo
-            $audioPath = null;
-            if ($request->file('audio')) {
-                $file = $request->file('audio');
-                $fileName = Str::random(40) . '.' . $file->getClientOriginalExtension();
-                $audioPath = $file->storeAs('maps/audio', $fileName, 'public');
-                
-                if (!$audioPath) {
-                    throw new \Exception('Error al guardar el archivo de audio');
-                }
-                
-                \Log::info('Archivo guardado en: ' . $audioPath);
-            }
+            $slug = \Str::slug($request->title . '-' . \Str::random(8));
 
             // Crear el mapa
             $map = Map::create([
@@ -97,17 +114,20 @@ class MapController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al guardar mapa: ' . $e->getMessage());
+            \Log::error('Error al guardar mapa:', [
+                'mensaje' => $e->getMessage(),
+                'archivo' => $e->getFile(),
+                'linea' => $e->getLine()
+            ]);
             
-            // Si algo falla, eliminar el archivo de audio si se subió
-            if (isset($audioPath)) {
+            // Si algo falla y se subió el archivo, eliminarlo
+            if (isset($audioPath) && Storage::disk('public')->exists($audioPath)) {
                 Storage::disk('public')->delete($audioPath);
             }
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al guardar el mapa: ' . $e->getMessage(),
-                'error_details' => $e->getMessage()
+                'message' => 'Error al guardar el mapa: ' . $e->getMessage()
             ], 500);
         }
     }
