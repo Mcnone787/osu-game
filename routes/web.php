@@ -21,6 +21,9 @@ Route::middleware(['auth'])->group(function () {
     
     // Ruta para subir el archivo de audio
     Route::post('/maps/upload-audio', [MapController::class, 'uploadAudio'])->name('maps.upload-audio');
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+    Route::get('/game/profile', [ProfileController::class, 'show'])->name('game.profile');
 });
 
 Route::post('/game/login', [GameAuthController::class, 'login'])->name('game.login');
