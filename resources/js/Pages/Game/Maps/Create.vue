@@ -55,7 +55,7 @@
                    @click="addNoteAtPosition($event, i-1)">
                 <!-- Grid de beats -->
                 <div class="beat-grid">
-                  <template v-if="form.bpm">
+                  <template v-if="formData.bpm">
                     <!-- Líneas principales (1/1) -->
                     <div v-for="beat in totalBeats" :key="`main-${beat}`"
                          class="beat-line main"
@@ -132,24 +132,33 @@
           <!-- Info básica -->
           <div class="map-config-item">
             <label class="text-white font-game mb-2 block">Título</label>
-            <input v-model="form.title" type="text" class="config-input">
+            <input v-model="formData.title" type="text" class="config-input">
           </div>
 
           <div class="map-config-item">
             <label class="text-white font-game mb-2 block">Artista</label>
-            <input v-model="form.artist" type="text" class="config-input">
+            <input v-model="formData.artist" type="text" class="config-input">
           </div>
 
-          <!-- Campo de BPM -->
           <div class="map-config-item">
             <label class="text-white font-game mb-2 block">BPM</label>
             <input 
-              v-model="form.bpm"
+              v-model="formData.bpm"
               type="number"
               min="1"
               class="config-input"
               placeholder="Ej: 120"
             >
+          </div>
+
+          <div class="map-config-item">
+            <label class="text-white font-game mb-2 block">Dificultad</label>
+            <select v-model="formData.difficulty" class="config-input">
+              <option value="easy">Fácil</option>
+              <option value="normal">Normal</option>
+              <option value="hard">Difícil</option>
+              <option value="expert">Experto</option>
+            </select>
           </div>
 
           <!-- Input Range personalizado -->
@@ -230,6 +239,21 @@
               Usa estas teclas o click para colocar notas
             </p>
           </div>
+
+          <!-- Botón de guardar -->
+          <button @click="saveMap"
+                  class="w-full bg-purple-600 hover:bg-purple-500 
+                         text-white font-game py-3 px-4 rounded-lg
+                         transition-colors duration-200
+                         flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" 
+                    stroke-linejoin="round" 
+                    stroke-width="2" 
+                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
+            Guardar Mapa
+          </button>
         </div>
       </div>
     </div>
@@ -248,12 +272,52 @@
         </div>
       </TransitionGroup>
     </div>
+
+    <!-- Sistema de notificaciones -->
+    <div class="fixed bottom-4 right-4 space-y-2 z-50">
+      <TransitionGroup name="notification">
+        <div v-for="notification in notifications"
+             :key="notification.id"
+             class="notification-container"
+             :class="notification.type">
+          <div class="flex items-center gap-2">
+            <!-- Icono de éxito -->
+            <svg v-if="notification.type === 'success'" 
+                 class="w-5 h-5 text-emerald-400" 
+                 fill="none" 
+                 viewBox="0 0 24 24" 
+                 stroke="currentColor">
+              <path stroke-linecap="round" 
+                    stroke-linejoin="round" 
+                    stroke-width="2" 
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <!-- Icono de error -->
+            <svg v-else 
+                 class="w-5 h-5 text-red-400" 
+                 fill="none" 
+                 viewBox="0 0 24 24" 
+                 stroke="currentColor">
+              <path stroke-linecap="round" 
+                    stroke-linejoin="round" 
+                    stroke-width="2" 
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {{ notification.message }}
+          </div>
+          <!-- Barra de progreso -->
+          <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-b-lg"
+               :style="{ width: `${notification.progress}%` }">
+          </div>
+        </div>
+      </TransitionGroup>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onUnmounted } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import axios from 'axios'
 
 const audioLoaded = ref(false)
 const isPlaying = ref(false)
@@ -272,12 +336,13 @@ const startTime = ref(0)
 
 const pixelsPerBeat = computed(() => scrollSpeed.value)
 
-const form = useForm({
+const formData = ref({
   title: '',
   artist: '',
+  bpm: 120,
+  difficulty: 'normal',
   audio: null,
-  notes: [],
-  bpm: 120
+  notes: []
 })
 
 const errorMessages = ref([])
@@ -294,14 +359,32 @@ const progressPercentage = computed(() => {
   return ((scrollSpeed.value - minValue) / (maxValue - minValue)) * 100
 })
 
+const notifications = ref([])
+
 function handleAudioUpload(event) {
   const file = event.target.files[0]
   if (file) {
+    // Validar tipo de archivo
+    const validTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg']
+    if (!validTypes.includes(file.type)) {
+      showNotification('Formato de audio no válido. Use MP3, WAV o OGG', 'error')
+      event.target.value = '' // Limpiar input
+      return
+    }
+
+    // Validar tamaño (10MB máximo)
+    const maxSize = 10 * 1024 * 1024 // 10MB en bytes
+    if (file.size > maxSize) {
+      showNotification('El archivo es demasiado grande. Máximo 10MB', 'error')
+      event.target.value = ''
+      return
+    }
+
+    formData.value.audio = file
     audio.value = new Audio(URL.createObjectURL(file))
     audio.value.addEventListener('loadedmetadata', () => {
       duration.value = audio.value.duration
       audioLoaded.value = true
-      form.audio = file
     })
   }
 }
@@ -336,14 +419,14 @@ function addNoteAtPosition(event, lane) {
   // Calcular posición exacta del click
   const clickY = event.clientY - rect.top + editorContainer.scrollTop
   
-  const beatDuration = 60 / form.bpm
+  const beatDuration = 60 / formData.value.bpm
   const snapDuration = beatDuration / snapDivision.value
   
   // Calcular tiempo basado en la posición exacta del click
   let time = clickY / pixelsPerBeat.value
   
   // Aplicar snap si está activado
-  if (form.bpm) {
+  if (formData.value.bpm) {
     time = Math.round(time / snapDuration) * snapDuration
   }
 
@@ -381,7 +464,7 @@ function highlightNote(noteId) {
 
 // Función para validar espaciado de notas
 function validateNoteSpacing() {
-  const beatDuration = 60 / form.bpm
+  const beatDuration = 60 / formData.value.bpm
   const minSpacing = beatDuration * 0.5
   
   // Validar por carril
@@ -417,9 +500,9 @@ function showError(message, event) {
 
 // Ajustar el tamaño visual de las notas
 const noteHeight = computed(() => {
-  if (!form.bpm) return 48
+  if (!formData.value.bpm) return 48
   
-  const beatDuration = 60 / form.bpm
+  const beatDuration = 60 / formData.value.bpm
   const snapDuration = beatDuration / snapDivision.value
   
   // Ajustar tamaño según el snap
@@ -431,7 +514,7 @@ const noteHeight = computed(() => {
 
 // Validar espaciado al intentar colocar nota
 function isValidSpacing(time, lane) {
-  const beatDuration = 60 / form.bpm
+  const beatDuration = 60 / formData.value.bpm
   const snapDuration = beatDuration / snapDivision.value
   
   return !notes.value.some(note => 
@@ -442,7 +525,7 @@ function isValidSpacing(time, lane) {
 
 // Función para verificar si una posición es válida
 function isValidNotePosition(time, lane) {
-  const minSpacing = form.bpm ? (60 / form.bpm / snapDivision.value) * 0.9 : 0.1
+  const minSpacing = formData.value.bpm ? (60 / formData.value.bpm / snapDivision.value) * 0.9 : 0.1
   return !notes.value.some(note => 
     note.lane === lane && 
     Math.abs(note.time - time) < minSpacing
@@ -465,9 +548,9 @@ function logClickPosition(event, lane) {
 }
 
 function snapToGrid(time) {
-  if (!form.bpm) return time
+  if (!formData.value.bpm) return time
   
-  const beatDuration = 60 / form.bpm
+  const beatDuration = 60 / formData.value.bpm
   const snapDuration = beatDuration / snapDivision.value
   return Math.round(time / snapDuration) * snapDuration
 }
@@ -486,9 +569,9 @@ function notesInLane(lane) {
 
 // Función para calcular los beats visibles
 const visibleBeats = computed(() => {
-  if (!form.bpm || !duration.value) return []
+  if (!formData.value.bpm || !duration.value) return []
   
-  const beatDuration = 60 / form.bpm
+  const beatDuration = 60 / formData.value.bpm
   const totalBeats = Math.ceil(duration.value / beatDuration)
   return Array.from({ length: totalBeats }, (_, i) => i)
 })
@@ -509,7 +592,7 @@ watch(scrollPosition, (newPos) => {
 })
 
 // Añadir watch para actualizar posiciones cuando cambie el BPM o snapDivision
-watch([() => form.bpm, () => snapDivision.value], () => {
+watch([() => formData.value.bpm, () => snapDivision.value], () => {
   if (notes.value.length > 0) {
     notes.value = notes.value.map(note => ({
       ...note,
@@ -520,9 +603,9 @@ watch([() => form.bpm, () => snapDivision.value], () => {
 
 // Función para calcular y mostrar las líneas de snap
 const snapLines = computed(() => {
-  if (!form.bpm || !duration.value) return []
+  if (!formData.value.bpm || !duration.value) return []
   
-  const beatDuration = 60 / form.bpm
+  const beatDuration = 60 / formData.value.bpm
   const snapDuration = beatDuration / snapDivision.value
   const totalSnaps = Math.ceil(duration.value / snapDuration)
   
@@ -534,8 +617,8 @@ const snapLines = computed(() => {
 })
 
 // Cálculos para las líneas de beat
-const beatSpacing = computed(() => pixelsPerBeat.value * (60 / form.bpm))
-const totalBeats = computed(() => Math.ceil(duration.value / (60 / form.bpm)))
+const beatSpacing = computed(() => pixelsPerBeat.value * (60 / formData.value.bpm))
+const totalBeats = computed(() => Math.ceil(duration.value / (60 / formData.value.bpm)))
 
 // Iniciar el arrastre
 function startDragging() {
@@ -562,6 +645,101 @@ function handleDrag(event) {
 // Detener el arrastre
 function stopDragging() {
   isDragging.value = false
+}
+
+async function saveMap() {
+  try {
+    // Validaciones básicas
+    if (!formData.value.title.trim()) {
+      showNotification('El título es requerido', 'error')
+      return
+    }
+    if (!formData.value.artist.trim()) {
+      showNotification('El artista es requerido', 'error')
+      return
+    }
+    if (!formData.value.audio) {
+      showNotification('Debes subir un archivo de audio', 'error')
+      return
+    }
+    if (!formData.value.bpm || formData.value.bpm < 1) {
+      showNotification('El BPM debe ser mayor a 0', 'error')
+      return
+    }
+
+    // Crear FormData para enviar
+    const submitData = new FormData()
+    submitData.append('title', formData.value.title.trim())
+    submitData.append('artist', formData.value.artist.trim())
+    submitData.append('bpm', formData.value.bpm)
+    submitData.append('difficulty', formData.value.difficulty)
+    submitData.append('audio', formData.value.audio)
+    submitData.append('notes', JSON.stringify(notes.value))
+
+    // Añadir el token CSRF
+    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+    if (token) {
+      submitData.append('_token', token)
+    }
+
+    const response = await axios.post(route('maps.store'), submitData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': token
+      }
+    })
+
+    if (response.data.success) {
+      showNotification('¡Mapa guardado con éxito!', 'success')
+    }
+  } catch (error) {
+    console.error('Error completo:', error)
+    
+    // Manejar errores de validación
+    if (error.response?.status === 422) {
+      const errors = error.response.data.errors
+      if (errors) {
+        // Mostrar el primer error de validación
+        const firstError = Object.values(errors)[0][0]
+        showNotification(firstError, 'error')
+      } else {
+        showNotification('Error de validación en el formulario', 'error')
+      }
+    } else {
+      showNotification(
+        error.response?.data?.message || 'Error al guardar el mapa',
+        'error'
+      )
+    }
+  }
+}
+
+function showNotification(message, type = 'success') {
+  const id = Date.now()
+  notifications.value.push({
+    id,
+    message,
+    type,
+    progress: 100
+  })
+
+  // Iniciar countdown
+  const duration = 5000
+  const interval = 10
+  const step = (100 * interval) / duration
+
+  const progressInterval = setInterval(() => {
+    const notification = notifications.value.find(n => n.id === id)
+    if (notification) {
+      notification.progress -= step
+    }
+  }, interval)
+
+  setTimeout(() => {
+    clearInterval(progressInterval)
+    notifications.value = notifications.value.filter(n => n.id !== id)
+  }, duration)
 }
 </script>
 

@@ -45,4 +45,10 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    // Añadimos la relación con los mapas
+    public function maps()
+    {
+        return $this->hasMany(Map::class);
+    }
 }
