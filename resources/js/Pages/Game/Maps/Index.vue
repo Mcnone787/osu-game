@@ -217,7 +217,6 @@
       const scrollPosition = window.innerHeight + window.scrollY
       const documentHeight = document.documentElement.scrollHeight
       
-      // Cargar más cuando estemos cerca del final (100px antes)
       if (scrollPosition >= documentHeight - 100 && !isLoading.value && !reachedEnd.value) {
         loadMoreMaps()
       }
