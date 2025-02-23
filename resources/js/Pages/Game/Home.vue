@@ -1,12 +1,10 @@
 <template>
   <div class="min-h-screen bg-dark bg-cover bg-center bg-no-repeat flex flex-col justify-between">
     <GameHeader 
-  
+
       :show-back="false"
       @toggle-settings="isSettingsOpen = true"
-    >
-
-    </GameHeader>
+    />
 
     <!-- Panel lateral de configuración/auth -->
     <div class="fixed inset-y-0 left-0 w-[420px] bg-black/95 transform transition-transform duration-300 z-50"
@@ -178,7 +176,8 @@
     <!-- Main Content -->
     <main class="flex-1 flex justify-center items-center p-5">
       <div class="relative flex items-center" 
-           :class="{ '-translate-x-52 transition-transform duration-300': isMenuOpen }">
+           :class="{ '-translate-x-[15vw] transition-transform duration-300': isMenuOpen }">
+        <!-- Botón BEAT! -->
         <button 
           @click="handleClick"
           :disabled="isAnimating"
@@ -187,12 +186,13 @@
           BEAT!
         </button>
 
-        <!-- Menú actualizado -->
+        <!-- Menú que aparece al hacer click -->
         <div 
           v-show="isMenuOpen"
           class="menu-container-alt"
         >
-          <Link 
+          <component 
+            :is="item.requiresAuth && !user ? 'button' : 'Link'"
             v-for="(item, index) in menuItems"
             :key="index"
             :href="item.href" 
@@ -203,14 +203,15 @@
               'translate-y-2': !itemVisible[index]
             }"
             :style="{ 
-              width: itemWidths[index] + 'px',
+              width: `${itemWidths[index]}px`,
               display: itemWidths[index] === 0 ? 'none' : 'flex'
             }"
+            @click="(e) => handleMenuItemClick(item, e)"
           >
             <span class="relative z-10" :class="{ 'opacity-0': itemWidths[index] < 150 }">
               {{ item.text }}
             </span>
-          </Link>
+          </component>
         </div>
       </div>
     </main>
@@ -223,42 +224,7 @@
     </footer>
 
     <!-- Sistema de notificaciones -->
-    <div class="fixed top-4 right-4 z-[100] space-y-4 min-w-[300px]">
-      <div v-for="notification in notifications" 
-           :key="notification.id"
-           class="notification-container"
-           :class="notification.type">
-        <div class="flex items-center gap-3">
-          <!-- Icono de éxito -->
-          <svg v-if="notification.type === 'success'" 
-               class="w-5 h-5 text-emerald-400" 
-               fill="none" 
-               viewBox="0 0 24 24" 
-               stroke="currentColor">
-            <path stroke-linecap="round" 
-                  stroke-linejoin="round" 
-                  stroke-width="2" 
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <!-- Icono de error -->
-          <svg v-else 
-               class="w-5 h-5 text-red-400" 
-               fill="none" 
-               viewBox="0 0 24 24" 
-               stroke="currentColor">
-            <path stroke-linecap="round" 
-                  stroke-linejoin="round" 
-                  stroke-width="2" 
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{{ notification.message }}</span>
-        </div>
-        <!-- Barra de progreso -->
-        <div class="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-pink-500 to-purple-600 rounded-b-lg"
-             :style="{ width: `${notification.progress}%` }">
-        </div>
-      </div>
-    </div>
+    <NotificationSystem ref="notificationSystem" />
   </div>
 </template>
 
@@ -267,6 +233,7 @@ import { ref, watch, computed } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 import GameHeader from '@/Components/GameHeader.vue'
+import NotificationSystem from '@/Components/NotificationSystem.vue'
 
 const page = usePage()
 const user = computed(() => page.props.auth.user)
@@ -280,7 +247,7 @@ const isLogin = ref(true)
 const shouldResetForm = ref(false)
 const errors = ref({})
 const processing = ref(false)
-const notifications = ref([])
+const notificationSystem = ref(null)
 
 const form = ref({
   username: '',
@@ -319,8 +286,16 @@ const controls = [
 
 const menuItems = [
   { text: 'Play Now', href: '/game/play' },
-  { text: 'Add Map', href: '/maps' },
-  { text: 'Profile', href: '/game/profile' },
+  { 
+    text: 'Add Map', 
+    href: '/maps',
+    requiresAuth: true 
+  },
+  { 
+    text: 'Profile', 
+    href: '/game/profile',
+    requiresAuth: true 
+  },
   { text: 'Exit', href: '/game/exit' }
 ]
 
@@ -412,33 +387,20 @@ watch(isLogin, () => {
   errors.value = {}
 })
 
-// Función para mostrar notificaciones
-function showNotification(message, type = 'success') {
-  const id = Date.now()
-  notifications.value.push({
-    id,
-    message,
-    type,
-    progress: 100
-  })
-
-  // Iniciar countdown
-  const duration = 5000
-  const interval = 10
-  const step = (100 * interval) / duration
-
-  const progressInterval = setInterval(() => {
-    const notification = notifications.value.find(n => n.id === id)
-    if (notification) {
-      notification.progress -= step
-    }
-  }, interval)
-
-  // Eliminar notificación después de la duración
-  setTimeout(() => {
-    clearInterval(progressInterval)
-    notifications.value = notifications.value.filter(n => n.id !== id)
-  }, duration)
+const handleMenuItemClick = (item) => {
+  if (item.requiresAuth && !user.value) {
+    notificationSystem.value.showNotification(
+      'Necesitas iniciar sesión para acceder a esta sección', 
+      'error'
+    )
+    isSettingsOpen.value = true
+    return
+  }
+  
+  // Solo navega si está autenticado o no requiere autenticación
+  if (!item.requiresAuth || user.value) {
+    router.visit(item.href)
+  }
 }
 
 async function handleSubmit() {
@@ -456,7 +418,7 @@ async function handleSubmit() {
       if (response.data.success) {
         isAuthPanelOpen.value = false
         usePage().props.auth.user = response.data.user
-        showNotification('¡Bienvenido de nuevo!')
+        notificationSystem.value.showNotification('¡Bienvenido de nuevo!')
       }
     } else {
       const response = await axios.post(route('game.register'), {
@@ -469,18 +431,18 @@ async function handleSubmit() {
       if (response.data.success) {
         isAuthPanelOpen.value = false
         usePage().props.auth.user = response.data.user
-        showNotification('¡Registro completado! Bienvenido al juego')
+        notificationSystem.value.showNotification('¡Registro completado! Bienvenido al juego')
       }
     }
   } catch (error) {
     if (error.response?.data?.errors) {
       errors.value = error.response.data.errors
-      showNotification('Por favor, verifica los datos ingresados', 'error')
+      notificationSystem.value.showNotification('Por favor, verifica los datos ingresados', 'error')
     } else {
       errors.value = {
         general: ['Ha ocurrido un error. Por favor, inténtalo de nuevo.']
       }
-      showNotification('Error de conexión. Inténtalo más tarde', 'error')
+      notificationSystem.value.showNotification('Error de conexión. Inténtalo más tarde', 'error')
     }
   } finally {
     processing.value = false
@@ -493,10 +455,10 @@ async function handleLogout() {
     if (response.data.success) {
       usePage().props.auth.user = null
       isSettingsOpen.value = false
-      showNotification('¡Hasta pronto! Has cerrado sesión correctamente')
+      notificationSystem.value.showNotification('¡Hasta pronto! Has cerrado sesión correctamente')
     }
   } catch (error) {
-    showNotification('Error al cerrar sesión. Inténtalo de nuevo.', 'error')
+    notificationSystem.value.showNotification('Error al cerrar sesión. Inténtalo de nuevo.', 'error')
   }
 }
 </script>
