@@ -414,6 +414,7 @@ const notificationSystem = ref(null)
 // Estado para el arrastre de notas
 const dragState = ref({
   isDragging: false,
+  wasDragging: false,
   startY: 0,
   selectedNotes: [],
   originalPositions: []
@@ -710,6 +711,15 @@ function handleDrag(event) {
 // Detener el arrastre
 function stopDragging() {
   isDragging.value = false
+  dragState.value.wasDragging = true // Marcar que acabamos de arrastrar
+  
+  // Resetear el estado de arrastre después de un momento
+  setTimeout(() => {
+    dragState.value.wasDragging = false
+  }, CLICK_DELAY * 2)
+
+  document.removeEventListener('mousemove', handleNoteDrag)
+  document.removeEventListener('mouseup', stopNoteDrag)
 }
 
 async function saveMap() {
@@ -850,8 +860,10 @@ const updateSelectedNotes = () => {
 const handleNoteClick = (event, note) => {
   event.stopPropagation()
   
-  if (isDragging.value) {
+  // Si acabamos de terminar de arrastrar, no procesar el click
+  if (dragState.value.isDragging || isDragging.value) {
     isDragging.value = false
+    dragState.value.isDragging = false
     return
   }
 
@@ -878,10 +890,11 @@ const handleNoteClick = (event, note) => {
         selection.value.selectedNotes.splice(index, 1)
       }
     } else {
-      // Click normal (sin Ctrl) siempre elimina la nota
-      removeNote(note)
-      // Limpiar la selección si la nota eliminada estaba seleccionada
-      selection.value.selectedNotes = selection.value.selectedNotes.filter(n => n.id !== note.id)
+      // Solo eliminar si no estamos justo después de arrastrar
+      if (!dragState.value.wasDragging) {
+        removeNote(note)
+        selection.value.selectedNotes = selection.value.selectedNotes.filter(n => n.id !== note.id)
+      }
     }
   }, CLICK_DELAY)
 }
@@ -896,6 +909,7 @@ const startNoteDrag = (event, note) => {
 
   dragState.value = {
     isDragging: true,
+    wasDragging: false,
     startY: event.clientY,
     selectedNotes,
     originalPositions: selectedNotes.map(n => ({ id: n.id, time: n.time }))
@@ -922,6 +936,13 @@ const handleNoteDrag = (event) => {
 
 const stopNoteDrag = () => {
   dragState.value.isDragging = false
+  dragState.value.wasDragging = true // Marcar que acabamos de arrastrar
+  
+  // Resetear el estado de arrastre después de un momento
+  setTimeout(() => {
+    dragState.value.wasDragging = false
+  }, CLICK_DELAY * 2)
+
   document.removeEventListener('mousemove', handleNoteDrag)
   document.removeEventListener('mouseup', stopNoteDrag)
 }
@@ -938,7 +959,7 @@ const updateMousePosition = (event) => {
   }
 }
 
-// Modificar el handleKeyboard para usar la posición guardada
+// Modificar el handleKeyboard para deseleccionar después de pegar
 const handleKeyboard = (event) => {
   if (!event.ctrlKey) return
 
@@ -965,14 +986,6 @@ const handleKeyboard = (event) => {
       const laneWidth = rect.width / 4
       const targetLane = Math.floor(mousePosition.value.x / laneWidth)
 
-      console.log('Debug - Pegado:', {
-        mouseX: mousePosition.value.x,
-        editorWidth: rect.width,
-        laneWidth,
-        targetLane,
-        currentTime: currentTime.value
-      })
-
       if (targetLane >= 0 && targetLane < 4) {
         const pasteTime = currentTime.value
         const newNotes = clipboard.value.map(note => ({
@@ -984,6 +997,9 @@ const handleKeyboard = (event) => {
         notes.value.push(...newNotes)
         notes.value.sort((a, b) => a.time - b.time)
         
+        // Deseleccionar las notas después de pegar
+        selection.value.selectedNotes = []
+        
         showNotification(
           `Pegadas ${newNotes.length} notas en carril ${targetLane + 1}`, 
           'success'
@@ -993,25 +1009,6 @@ const handleKeyboard = (event) => {
       }
     } else {
       showNotification('No hay notas copiadas para pegar', 'error')
-    }
-  }
-
-  if (event.key.toLowerCase() === SELECT_KEY) {
-    // Seleccionar todas las notas del carril actual
-    const editorContainer = document.querySelector('.editor-container')
-    const lanes = document.querySelectorAll('.lane-column')
-    const mouseX = event.clientX - editorContainer.getBoundingClientRect().left
-    const laneWidth = editorContainer.clientWidth / 4
-    const currentLane = Math.floor(mouseX / laneWidth)
-
-    if (currentLane >= 0 && currentLane < 4) {
-      selection.value = {
-        active: true,
-        startTime: 0,
-        endTime: duration.value,
-        selectedNotes: notes.value.filter(note => note.lane === currentLane)
-      }
-      showNotification(`Seleccionadas ${selection.value.selectedNotes.length} notas del carril ${currentLane + 1}`, 'success')
     }
   }
 }
