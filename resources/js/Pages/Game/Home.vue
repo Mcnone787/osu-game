@@ -1,29 +1,12 @@
 <template>
   <div class="min-h-screen bg-dark bg-cover bg-center bg-no-repeat flex flex-col justify-between">
-    <!-- Header -->
-    <header class="w-full px-5 py-3 bg-black/50 text-white flex justify-between items-center shadow-lg">
-      <!-- Usuario/Login -->
-      <div class="username-container font-game cursor-pointer" @click="isSettingsOpen = true">
-        <template v-if="user">
-          <p class="text-xl text-purple-400">{{ user.name }}</p>
-          <p class="text-sm text-pink-500 hover:text-pink-400 transition-colors">
-            Configuración del juego
-          </p>
-        </template>
-        <template v-else>
-          <p class="text-xl">Guest</p>
-          <p class="text-sm hover:text-pink-500 transition-colors">
-            ¡Haz click para iniciar sesión!
-          </p>
-        </template>
-      </div>
-      <div class="flex gap-3">
-        <button v-for="control in controls" :key="control.icon" class="hover:text-pink-500 transition-colors"
-                @click="control.action">
-          <component :is="control.icon" class="w-6 h-6"/>
-        </button>
-      </div>
-    </header>
+    <GameHeader 
+  
+      :show-back="false"
+      @toggle-settings="isSettingsOpen = true"
+    >
+
+    </GameHeader>
 
     <!-- Panel lateral de configuración/auth -->
     <div class="fixed inset-y-0 left-0 w-[420px] bg-black/95 transform transition-transform duration-300 z-50"
@@ -283,11 +266,12 @@
 import { ref, watch, computed } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
+import GameHeader from '@/Components/GameHeader.vue'
 
 const page = usePage()
 const user = computed(() => page.props.auth.user)
 const isMenuOpen = ref(false)
-const isSettingsOpen = ref(false) // Nueva variable para el menú de configuración del juego
+const isSettingsOpen = ref(false)
 const isAnimating = ref(false)
 const itemVisible = ref([false, false, false, false])
 const itemWidths = ref([0, 0, 0, 0])

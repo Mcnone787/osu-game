@@ -1,29 +1,24 @@
 <template>
     <div class="min-h-screen bg-dark flex flex-col">
-      <!-- Header -->
-      <header class="bg-black border-b-2 border-pink-500">
-        <div class="container mx-auto px-8 py-4">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-8">
-              <h1 class="font-game text-4xl">
-                <span class="text-white">MAP</span>
-                <span class="text-pink-500">/</span>
-                <span class="text-purple-500">LIST</span>
-              </h1>
-            </div>
-            <Link 
-              :href="route('maps.create')"
-              class="bg-gradient-to-r from-pink-600/40 to-purple-600/40 
-                     hover:from-pink-500/60 hover:to-purple-500/60 
-                     text-white px-6 py-2 rounded-lg transition-all
-                     font-game border border-pink-500/30
-                     hover:scale-105 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]"
-            >
-              Crear Nuevo Mapa
-            </Link>
-          </div>
-        </div>
-      </header>
+      <GameHeader 
+        title="MAP" 
+        subtitle="LIST"
+        :show-back="true"
+        :back-url="route('game.home')"
+      >
+        <template #actions>
+          <Link 
+            :href="route('maps.create')"
+            class="bg-gradient-to-r from-pink-600/40 to-purple-600/40 
+                   hover:from-pink-500/60 hover:to-purple-500/60 
+                   text-white px-6 py-2 rounded-lg transition-all
+                   font-game border border-pink-500/30
+                   hover:scale-105 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]"
+          >
+            Crear Nuevo Mapa
+          </Link>
+        </template>
+      </GameHeader>
   
       <!-- Main content -->
       <div class="flex-1 container mx-auto p-8">
@@ -147,6 +142,7 @@
   import { ref, onMounted, onUnmounted } from 'vue'
   import { Link } from '@inertiajs/vue3'
   import axios from 'axios'
+  import GameHeader from '@/Components/GameHeader.vue'
   
   const props = defineProps({
     initialMaps: {

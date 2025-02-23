@@ -1,30 +1,22 @@
 <template>
   <div class="min-h-screen bg-dark flex flex-col">
-    <!-- Header con info básica -->
-    <header class="bg-black border-b-2 border-pink-500">
-      <div class="container mx-auto px-8 py-4">
-        <div class="flex justify-between items-center">
-          <div class="flex items-center gap-8">
-            <h1 class="font-game text-4xl">
-              <span class="text-white">MAP</span>
-              <span class="text-pink-500">/</span>
-              <span class="text-purple-500">CREATOR</span>
-            </h1>
-          </div>
-          <div class="flex items-center gap-4">
-            <!-- Controles de audio -->
-            <button v-if="audioLoaded" 
-                    @click="togglePlayback" 
-                    class="editor-button">
-              {{ isPlaying ? '⏸️ Pausar' : '▶️ Reproducir' }}
-            </button>
-            <span v-if="audioLoaded" class="text-white font-mono">
-              {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
-            </span>
-          </div>
-        </div>
-      </div>
-    </header>
+    <GameHeader 
+      title="MAP" 
+      subtitle="CREATOR"
+      :show-back="true"
+      :back-url="route('maps.index')"
+    >
+      <template #actions>
+        <button v-if="audioLoaded" 
+                @click="togglePlayback" 
+                class="editor-button">
+          {{ isPlaying ? '⏸️ Pausar' : '▶️ Reproducir' }}
+        </button>
+        <span v-if="audioLoaded" class="text-white font-mono">
+          {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
+        </span>
+      </template>
+    </GameHeader>
 
     <!-- Editor principal -->
     <div class="flex-1 grid grid-cols-12 h-[calc(100vh-5rem)]">
@@ -323,6 +315,7 @@ import { ref, computed, watch, onUnmounted } from 'vue'
 import axios from 'axios'
 import Spinner from '@/Components/Spinner.vue'
 import { router } from '@inertiajs/vue3'
+import GameHeader from '@/Components/GameHeader.vue'
 
 const audioLoaded = ref(false)
 const isPlaying = ref(false)
