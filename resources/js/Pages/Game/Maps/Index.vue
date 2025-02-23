@@ -106,14 +106,14 @@
           </div>
   
           <!-- Mensaje de fin -->
-          <div v-if="reachedEnd && mapsList.length > 0" 
+          <div v-if="(reachedEnd || response?.has_more === false) && mapsList.length > 0" 
                class="bg-purple-900/20 border border-purple-500/30 
-                      rounded-lg p-6 text-center">
+                      rounded-lg p-6 text-center animate-fadeIn">
             <div class="text-purple-400 font-game text-xl mb-2">
               🎮 ¡Has llegado al final!
             </div>
             <p class="text-gray-400">
-              Has visto todos los mapas disponibles
+              Has visto todos los mapas disponibles ({{ mapsList.length }} en total)
             </p>
           </div>
   
@@ -159,6 +159,7 @@
   const isLoading = ref(false)
   const reachedEnd = ref(false)
   const mapsList = ref(props.initialMaps || [])
+  const response = ref(null)
   
   function getDifficultyClass(difficulty) {
     const classes = {
@@ -176,7 +177,6 @@
     }
   }
   
-  // Función para cargar más mapas
   async function loadMoreMaps() {
     if (isLoading.value || reachedEnd.value) return
   
@@ -184,18 +184,20 @@
       isLoading.value = true
       const nextPage = currentPage.value + 1
   
-      const response = await axios.get(`/maps`, {
+      const result = await axios.get(`/maps`, {
         params: {
           page: nextPage
         }
       })
   
-      if (!response.data.has_more) {
+      response.value = result.data
+  
+      if (!result.data.has_more) {
         reachedEnd.value = true
       }
   
-      if (response.data.data && response.data.data.length > 0) {
-        mapsList.value = [...mapsList.value, ...response.data.data]
+      if (result.data.data && result.data.data.length > 0) {
+        mapsList.value = [...mapsList.value, ...result.data.data]
         currentPage.value = nextPage
       } else {
         reachedEnd.value = true
@@ -207,6 +209,24 @@
       isLoading.value = false
     }
   }
+  
+  // Verificar inmediatamente si hay más páginas disponibles
+  onMounted(async () => {
+    window.addEventListener('scroll', handleScroll)
+    
+    // Hacer una petición inicial para verificar si hay más páginas
+    try {
+      const result = await axios.get(`/maps`, {
+        params: { page: 1 }
+      })
+      response.value = result.data
+      if (!result.data.has_more) {
+        reachedEnd.value = true
+      }
+    } catch (error) {
+      console.error('Error en la verificación inicial:', error)
+    }
+  })
   
   // Función para detectar scroll con debounce
   let scrollTimeout
@@ -222,11 +242,6 @@
       }
     }, 100)
   }
-  
-  // Lifecycle hooks
-  onMounted(() => {
-    window.addEventListener('scroll', handleScroll)
-  })
   
   onUnmounted(() => {
     window.removeEventListener('scroll', handleScroll)
@@ -274,6 +289,10 @@
            text-white hover:text-pink-500;
   }
   
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  
   @keyframes fadeIn {
     from {
       opacity: 0;
@@ -283,10 +302,6 @@
       opacity: 1;
       transform: translateY(0);
     }
-  }
-  
-  .animate-fadeIn {
-    animation: fadeIn 0.3s ease-out forwards;
   }
   
   /* Aplicar delay a cada item */
