@@ -196,7 +196,7 @@
             v-for="(item, index) in menuItems"
             :key="index"
             :href="item.href" 
-            class="menu-item-alt opacity-0"
+            class="menu-item-alt opacity-0 cursor-pointer"
             :class="{ 
               'opacity-100': itemVisible[index],
               'translate-y-0': itemVisible[index],
