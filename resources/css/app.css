@@ -20,22 +20,29 @@
 
   .osu-button {
     @apply font-game flex justify-center items-center relative
-    w-[520px] h-[500px] rounded-full
-    bg-purple-900
-    border-[20px] border-purple-900
-    text-white
-    text-8xl font-bold uppercase cursor-pointer
-    shadow-[0_0_20px_rgba(255,255,255,0.6)]
-    transition-all duration-300
-    hover:scale-110 hover:shadow-[0_0_30px_rgba(255,255,255,0.8)]
-    hover:bg-purple-900 hover:border-purple-500;
+           text-white font-bold uppercase cursor-pointer
+           transition-all duration-300
+           hover:scale-110 hover:shadow-[0_0_30px_rgba(255,255,255,0.8)]
+           hover:bg-purple-900 hover:border-purple-500;
+
+    /* Tamaños más proporcionados para cada breakpoint */
+    @apply w-[200px] h-[200px] text-3xl border-[8px]              /* Mobile */
+           sm:w-[260px] sm:h-[260px] sm:text-4xl sm:border-[10px] /* Small */
+           md:w-[320px] md:h-[320px] md:text-5xl md:border-[12px] /* Medium */
+           lg:w-[380px] lg:h-[380px] lg:text-6xl lg:border-[15px] /* Large */
+           xl:w-[440px] xl:h-[440px] xl:text-7xl xl:border-[18px]; /* Extra Large */
+
+    /* Estilos base */
+    @apply rounded-full bg-purple-900 border-purple-900
+           shadow-[0_0_20px_rgba(255,255,255,0.6)];
+
     animation: solidPulse 0.4s infinite;
   }
 
   .osu-button::before,
   .osu-button::after {
     @apply content-[''] absolute top-1/2 left-1/2 w-full h-full
-    rounded-full -translate-x-1/2 -translate-y-1/2;
+           rounded-full -translate-x-1/2 -translate-y-1/2;
     animation: floaty 6s linear infinite;
   }
 
@@ -45,26 +52,45 @@
 
   .menu-container {
     @apply absolute left-[85%] top-1/2 -translate-y-1/2
-    flex flex-col gap-12 min-w-[300px];
+           flex flex-col gap-6 sm:gap-8 md:gap-10 lg:gap-12;
+    
+    /* Ancho responsivo */
+    @apply min-w-[200px] sm:min-w-[250px] md:min-w-[280px] lg:min-w-[300px];
   }
 
   .menu-item {
-    @apply bg-purple-800/80 px-12 py-7
-    rounded-r-2xl text-center text-white
-    transform transition-all duration-500
-    hover:bg-gradient-radial hover:from-pink-400 hover:to-pink-600
-    hover:scale-110 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]
-    hover:translate-x-4;
+    @apply bg-purple-800/80 rounded-r-2xl text-center text-white
+           transform transition-all duration-500
+           hover:bg-gradient-radial hover:from-pink-400 hover:to-pink-600
+           hover:scale-110 hover:shadow-[0_0_20px_rgba(255,255,255,0.4)]
+           hover:translate-x-4;
+
+    /* Padding responsivo */
+    @apply px-6 py-4
+           sm:px-8 sm:py-5
+           md:px-10 md:py-6
+           lg:px-12 lg:py-7;
+
+    /* Texto responsivo */
+    @apply text-base sm:text-lg md:text-xl lg:text-2xl;
+
     animation: menuItemAppear 0.5s backwards;
   }
 
   .key-hint {
-    @apply text-white font-game text-xl
-           bg-purple-900/50 px-4 py-1 rounded-lg
+    @apply text-white font-game
+           bg-purple-900/50 rounded-lg
            border border-purple-500/50;
+
+    /* Texto y padding responsivos */
+    @apply text-sm px-2 py-0.5
+           sm:text-base sm:px-3 sm:py-0.5
+           md:text-lg md:px-3 md:py-1
+           lg:text-xl lg:px-4 lg:py-1;
   }
 }
 
+/* Animaciones mejoradas para rendimiento */
 @keyframes floaty {
   0%, 100% {
     transform: translate(-50%, -50%) scale(1);
@@ -102,8 +128,46 @@
   }
 }
 
-/* Delays más pronunciados para efecto más dramático */
+/* Delays responsivos para el menú */
 .menu-item:nth-child(1) { animation-delay: 0.2s; }
 .menu-item:nth-child(2) { animation-delay: 0.35s; }
 .menu-item:nth-child(3) { animation-delay: 0.5s; }
 .menu-item:nth-child(4) { animation-delay: 0.65s; }
+
+/* Optimizaciones de rendimiento */
+.osu-button {
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Media query para dispositivos muy pequeños */
+@media (max-width: 360px) {
+  .osu-button {
+    @apply w-[180px] h-[180px] text-2xl border-[6px];
+  }
+  
+  .menu-container {
+    @apply gap-4 min-w-[180px];
+  }
+  
+  .menu-item {
+    @apply px-4 py-3 text-sm;
+  }
+}
+
+/* Media query para pantallas muy grandes */
+@media (min-width: 1920px) {
+  .osu-button {
+    @apply w-[500px] h-[500px] text-8xl border-[20px];
+  }
+}
+
+/* Media query para ajustes en altura */
+@media (max-height: 700px) {
+  .osu-button {
+    @apply w-[180px] h-[180px] text-2xl border-[6px]
+           sm:w-[220px] sm:h-[220px] sm:text-3xl sm:border-[8px]
+           md:w-[260px] md:h-[260px] md:text-4xl md:border-[10px]
+           lg:w-[300px] lg:h-[300px] lg:text-5xl lg:border-[12px];
+  }
+}
