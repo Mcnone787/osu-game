@@ -52,6 +52,22 @@ class GameController extends Controller
         ]);
     }
 
+    public function startGame(Map $map)
+    {
+        return Inertia::render('Game/GamePlay', [
+            'map' => [
+                'id' => $map->id,
+                'title' => $map->title,
+                'artist' => $map->artist,
+                'difficulty' => strtoupper($map->difficulty),
+                'bpm' => $map->bpm,
+                'audio_path' => asset('storage/' . $map->audio_path),
+                'notes' => $map->notes, // Asegúrate de tener esta columna en tu base de datos
+                'creator' => $map->user->name,
+            ]
+        ]);
+    }
+
     private function transformMap($map)
     {
         return [

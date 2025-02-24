@@ -23,7 +23,18 @@
         
         <div v-else class="ranking-container">
           <div class="mb-6">
-            <h2 class="text-2xl font-game mb-4">{{ selectedSong.title }}</h2>
+            <div class="flex items-center justify-between">
+              
+              <h2 class="text-2xl font-game mb-4">{{ selectedSong.title }}</h2>
+              <button @click="startGame(selectedSong)" class="bg-gradient-to-r from-pink-600/40 to-purple-600/40 
+              hover:from-pink-500/60 hover:to-purple-500/60 
+              text-white px-6 py-2 rounded-lg transition-all
+              font-game border border-pink-500/30
+              hover:scale-105 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]
+              flex items-center gap-2">
+              Jugar
+              </button>
+            </div>
             <DropdownSelector
               v-model="selectedRanking"
               :options="rankingTypes"
@@ -68,7 +79,7 @@
         <div class="song-list h-full overflow-y-auto px-2">
           <div v-for="song in songsList" 
                :key="song.id" 
-               @click="selectedSong = song"
+               @click="selectSong(song)"
                class="song-item"
                :class="{'active': selectedSong?.id === song.id}">
             <!-- Imagen de la canción -->
@@ -176,6 +187,7 @@ const songsList = ref(props.initialSongs.data || [])
 const selectedSong = ref(null)
 const selectedRanking = ref(rankingTypes[0])
 const response = ref(null)
+let musicid = ref(null)
 
 async function loadMoreSongs() {
     if (isLoading.value || reachedEnd.value) return
@@ -215,7 +227,13 @@ const currentRankings = computed(() => {
 })
 
 const noSongSelected = computed(() => !selectedSong.value)
-
+function selectSong(song) {
+    selectedSong.value = song
+}
+function startGame(song) {
+    musicid.value = song.id
+    router.visit(route('game.play.start', { map: song.id }))
+}
 // Función para detectar scroll con debounce
 let scrollTimeout
 function handleScroll(e) {

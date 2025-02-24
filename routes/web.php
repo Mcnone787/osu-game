@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\GameAuthController;
 
 Route::get('/', [GameController::class, 'index'])->name('game.home');
 Route::get('/game/play', [GameController::class, 'play'])->name('game.play');
+Route::get('/game/play/{map}', [GameController::class, 'startGame'])->name('game.play.start');
 
 Route::middleware(['auth'])->group(function () {
     // Rutas para gestión de mapas
