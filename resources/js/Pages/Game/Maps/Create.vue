@@ -1,62 +1,7 @@
 <template>
   <div class="min-h-screen bg-dark flex flex-col">
     <!-- Header con controles de audio -->
-    <div class="bg-black border-b border-purple-900">
-      <div class="container mx-auto px-4">
-        <div class="flex items-center justify-between h-16">
-          <!-- Título y navegación -->
-          <div class="flex items-center gap-4">
-            <Link :href="route('maps.index')" 
-                  class="text-white/70 hover:text-white transition-colors">
-              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <h1 class="text-2xl font-game bg-gradient-to-r from-white via-purple-400 to-pink-500 text-transparent bg-clip-text">
-              MAP/CREATOR
-            </h1>
-          </div>
-
-          <!-- Controles de Audio -->
-          <div class="flex items-center gap-4 flex-1 max-w-2xl mx-4">
-            <span class="text-white/70 font-game text-sm">{{ formatTime(currentTime) }}</span>
-            
-            <div class="flex-1">
-              <div class="audio-progress-container" 
-                   @click="handleProgressClick($event, 'left')">
-                <div class="audio-progress-bar"
-                     :class="{ 'progress-complete': progressPercentage > 50 }"
-                     :style="{ 
-                       width: progressPercentage <= 50 
-                         ? (progressPercentage * 2) + '%' 
-                         : '100%'
-                     }">
-                </div>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-              <button @click="togglePlayback" 
-                      class="audio-control-btn">
-                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path v-if="!isPlaying" 
-                        stroke-linecap="round" 
-                        stroke-linejoin="round" 
-                        stroke-width="2" 
-                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path v-else
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M10 9v6m4-6v6" />
-                </svg>
-              </button>
-              <span class="text-white/70 font-game text-sm">{{ formatTime(duration) }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+ 
 
     <GameHeader 
       title="MAP" 
@@ -64,23 +9,18 @@
       :show-back="true"
       :back-url="route('maps.index')"
     >
-      <template #actions>
-        <button v-if="audioLoaded" 
-                @click="togglePlayback" 
-                class="editor-button">
-          {{ isPlaying ? '⏸️ Pausar' : '▶️ Reproducir' }}
-        </button>
-        <span v-if="audioLoaded" class="text-white font-mono">
-          {{ formatTime(currentTime) }} / {{ formatTime(duration) }}
-        </span>
-      </template>
+ 
     </GameHeader>
 
     <!-- Editor principal -->
     <div class="flex-1 grid grid-cols-12 h-[calc(100vh-5rem)]">
       <!-- Timeline y carriles -->
       <div class="col-span-9 bg-black/80 relative"
-           @mousemove="updateMousePosition">
+           @mousemove="updateMousePosition"
+           @keydown="handleKeyDown"
+           @keyup="handleKeyUp"
+           tabindex="0"
+           style="outline: none;">
         <!-- Receptores fijos en la parte inferior -->
         <div class="fixed-receptors">
           <!-- Controles de Audio -->
@@ -155,7 +95,12 @@
         </div>
 
         <!-- Editor con scroll -->
-        <div class="editor-container">
+        <div class="editor-container"
+             tabindex="0"
+             @click="handleEditorClick"
+             @keydown="handleKeyDown"
+             @keyup="handleKeyUp"
+             style="outline: none;">
           <div v-if="audioLoaded" 
                class="relative"
                :style="{ height: `${duration * pixelsPerBeat}px` }"
@@ -165,7 +110,7 @@
             <div class="absolute inset-0 flex">
               <div v-for="i in 4" :key="i" 
                    class="lane-column relative"
-                   @click="addNoteAtPosition($event, i-1)">
+                   @click="(e) => handleLaneClick(e, i-1)">
                 <!-- Grid de beats -->
                 <div class="beat-grid">
                   <template v-if="formData.bpm">
@@ -210,10 +155,7 @@
                        'selected': selection.selectedNotes.includes(note),
                        'dragging': dragState.isDragging && dragState.selectedNotes.includes(note)
                      }"
-                     :style="{ 
-                       top: `${note.time * pixelsPerBeat}px`,
-                       cursor: selection.selectedNotes.includes(note) ? 'move' : 'pointer'
-                     }"
+                     :style="getNoteStyle(note)"
                      @click="(e) => handleNoteClick(e, note)"
                      @mousedown="(e) => startNoteDrag(e, note)">
                   <div class="note-block"></div>
@@ -385,21 +327,6 @@
       </div>
     </div>
 
-    <!-- Mensajes de error con mejor posicionamiento -->
-    <div class="error-container">
-      <TransitionGroup name="error">
-        <div v-for="error in errorMessages"
-             :key="error.id"
-             class="error-message"
-             :style="{
-               left: `${error.x}px`,
-               top: `${error.y}px`
-             }">
-          {{ error.message }}
-        </div>
-      </TransitionGroup>
-    </div>
-
     <!-- Sistema de notificaciones -->
     <div class="fixed bottom-4 right-4 space-y-2 z-50">
       <TransitionGroup name="notification">
@@ -486,6 +413,14 @@
         </svg>
       </button>
     </div>
+
+    <!-- Mensajes de error -->
+    <div v-for="error in errorMessages" 
+         :key="error.id"
+         class="absolute text-red-500 font-bold pointer-events-none"
+         :style="{ left: error.x + 'px', top: error.y + 'px' }">
+      {{ error.message }}
+    </div>
   </div>
 </template>
 
@@ -493,7 +428,7 @@
 import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import axios from 'axios'
 import Spinner from '@/Components/Spinner.vue'
-import { router } from '@inertiajs/vue3'
+import { router, Link } from '@inertiajs/vue3'
 import GameHeader from '@/Components/GameHeader.vue'
 import NotificationSystem from '@/Components/NotificationSystem.vue'
 
@@ -512,7 +447,6 @@ const audioContext = ref(null)
 const audioSource = ref(null)
 const startTime = ref(0)
 
-const pixelsPerBeat = computed(() => scrollSpeed.value)
 
 const formData = ref({
   title: '',
@@ -523,7 +457,7 @@ const formData = ref({
   notes: []
 })
 
-const errorMessages = ref([])
+const pixelsPerBeat = computed(() => scrollSpeed.value)
 
 const isDragging = ref(false)
 const rangeContainer = ref(null)
@@ -577,6 +511,13 @@ const mousePosition = ref({ x: 0, y: 0 })
 // Añadir ref para controlar visibilidad
 const showShortcuts = ref(true) // Inicialmente visible
 
+// Agregar el ref para los mensajes de error
+const errorMessages = ref([]);
+
+// Añadir ref para controlar el delay después de soltar Alt
+const altReleaseTimeout = ref(null);
+const canClick = ref(true);
+
 function handleAudioUpload(event) {
   const file = event.target.files[0]
   if (file) {
@@ -626,33 +567,74 @@ function updatePlaybackTime() {
   }
 }
 
-function addNoteAtPosition(event, lane) {
-  const editorContainer = document.querySelector('.editor-container')
-  const rect = editorContainer.getBoundingClientRect()
-  
-  // Calcular posición exacta del click
-  const clickY = event.clientY - rect.top + editorContainer.scrollTop
-  
-  const beatDuration = 60 / formData.value.bpm
-  const snapDuration = beatDuration / snapDivision.value
-  
-  // Calcular tiempo basado en la posición exacta del click
-  let time = clickY / pixelsPerBeat.value
-  
-  // Aplicar snap si está activado
-  if (formData.value.bpm) {
-    time = Math.round(time / snapDuration) * snapDuration
-  }
 
-  // Crear la nota en la posición exacta
-  notes.value.push({
-    id: Date.now(),
-    lane,
-    time
-  })
-  
-  // Mantener las notas ordenadas por tiempo
-  notes.value.sort((a, b) => a.time - b.time)
+
+// Función para manejar el click en el carril
+function handleLaneClick(event, laneIndex) {
+
+
+  try {
+    if (!event) {
+      console.error('Evento es undefined');
+      return;
+    }
+
+    if (!event.currentTarget) {
+      console.error('currentTarget es undefined');
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    console.log('Rect:', rect);
+
+    // Calcular tiempo basado en la posición Y
+    const time = (event.clientY - rect.top) / pixelsPerBeat.value;
+    console.log('Tiempo calculado:', time);
+
+    // Solo agregar nota si todos los valores son válidos
+    if (isNaN(time)) {
+      console.error('Tiempo calculado no es válido');
+      return;
+    }
+
+    addNoteAtPosition(laneIndex, time);
+  } catch (error) {
+    console.error('Error detallado en handleLaneClick:', error);
+  }
+}
+
+// Función para agregar nota
+function addNoteAtPosition(lane, time) {
+
+
+  try {
+    if (lane === undefined || time === undefined) {
+      console.error('Lane o time son undefined');
+      return;
+    }
+
+    if (typeof lane !== 'number' || typeof time !== 'number') {
+      console.error('Lane o time no son números');
+      return;
+    }
+
+    if (isNaN(lane) || isNaN(time)) {
+      console.error('Lane o time son NaN');
+      return;
+    }
+
+    const newNote = {
+      id: Date.now(),
+      lane,
+      time
+    };
+
+    console.log('Nueva nota a agregar:', newNote);
+    notes.value.push(newNote);
+    console.log('Nota agregada exitosamente');
+  } catch (error) {
+    console.error('Error en addNoteAtPosition:', error);
+  }
 }
 
 // Función para eliminar nota específica
@@ -676,41 +658,10 @@ function highlightNote(noteId) {
   }
 }
 
-// Función para validar espaciado de notas
-function validateNoteSpacing() {
-  const beatDuration = 60 / formData.value.bpm
-  const minSpacing = beatDuration * 0.5
-  
-  // Validar por carril
-  for (let lane = 0; lane < 4; lane++) {
-    const laneNotes = notes.value
-      .filter(note => note.lane === lane)
-      .sort((a, b) => a.time - b.time)
-    
-    for (let i = 0; i < laneNotes.length - 1; i++) {
-      const spacing = laneNotes[i + 1].time - laneNotes[i].time
-      if (spacing < minSpacing) {
-        highlightNote(laneNotes[i].id)
-        highlightNote(laneNotes[i + 1].id)
-      }
-    }
-  }
-}
 
-function showError(message, event) {
-  // Calcular posición exacta para el mensaje
-  const error = {
-    id: Date.now(),
-    message,
-    x: event.clientX,
-    y: event.clientY - 20 // Desplazar un poco arriba para mejor visibilidad
-  }
-  
-  errorMessages.value.push(error)
-  setTimeout(() => {
-    errorMessages.value = errorMessages.value.filter(e => e.id !== error.id)
-  }, 2000)
-}
+
+
+
 
 // Ajustar el tamaño visual de las notas
 const noteHeight = computed(() => {
@@ -726,40 +677,9 @@ const noteHeight = computed(() => {
   )
 })
 
-// Validar espaciado al intentar colocar nota
-function isValidSpacing(time, lane) {
-  const beatDuration = 60 / formData.value.bpm
-  const snapDuration = beatDuration / snapDivision.value
-  
-  return !notes.value.some(note => 
-    note.lane === lane && 
-    Math.abs(note.time - time) <= snapDuration
-  )
-}
 
-// Función para verificar si una posición es válida
-function isValidNotePosition(time, lane) {
-  const minSpacing = formData.value.bpm ? (60 / formData.value.bpm / snapDivision.value) * 0.9 : 0.1
-  return !notes.value.some(note => 
-    note.lane === lane && 
-    Math.abs(note.time - time) < minSpacing
-  )
-}
 
-// Función auxiliar para debug
-function logClickPosition(event, lane) {
-  const editorContainer = document.querySelector('.editor-container')
-  const clickY = event.clientY
-  const containerRect = editorContainer.getBoundingClientRect()
-  const relativeY = clickY - containerRect.top + editorContainer.scrollTop
-  console.log('Click position:', {
-    clickY,
-    containerTop: containerRect.top,
-    scroll: editorContainer.scrollTop,
-    relativeY,
-    time: relativeY / pixelsPerBeat.value
-  })
-}
+
 
 function snapToGrid(time) {
   if (!formData.value.bpm) return time
@@ -775,10 +695,15 @@ function formatTime(seconds) {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
-function notesInLane(lane) {
-  return notes.value
-    .filter(note => note.lane === lane)
-    .sort((a, b) => a.time - b.time) // Ordenar por tiempo
+function notesInLane(laneIndex) {
+  return notes.value.filter(note => note.lane === laneIndex)
+}
+
+// Función para calcular el estilo de la nota
+function getNoteStyle(note) {
+  return {
+    top: `${note.time * pixelsPerBeat.value}px`
+  };
 }
 
 // Función para calcular los beats visibles
@@ -914,9 +839,9 @@ async function saveMap() {
   }
 }
 
-// Función para manejar la selección
+// Modificar la función para manejar la selección
 const handleSelection = (event) => {
-  if (!event.ctrlKey) return
+  if (!event.altKey) return
   
   event.preventDefault() // Prevenir comportamiento por defecto
   
@@ -926,11 +851,11 @@ const handleSelection = (event) => {
   const timeAtClick = clickY / pixelsPerBeat.value
 
   if (event.shiftKey && selection.value.startTime !== null) {
-    // Extender selección
+    // Alt + Shift + Click: Extender selección
     selection.value.endTime = timeAtClick
     updateSelectedNotes()
   } else {
-    // Nueva selección
+    // Alt + Click: Nueva selección
     selection.value.active = true
     selection.value.startTime = timeAtClick
     selection.value.endTime = timeAtClick
@@ -955,47 +880,68 @@ const updateSelectedNotes = () => {
   selection.value.selectedNotes = [...new Set([...currentSelection, ...newSelection])]
 }
 
-// Modificar handleNoteClick
-const handleNoteClick = (event, note) => {
-  event.stopPropagation()
+// Modificar deleteSelectedNotes para manejar notas de cualquier carril
+function deleteSelectedNotes() {
+  if (selection.value.selectedNotes.length === 0) {
+    console.log('No hay notas seleccionadas para eliminar');
+    return;
+  }
+
+  const selectedIds = new Set(selection.value.selectedNotes.map(note => note.id));
+  notes.value = notes.value.filter(note => !selectedIds.has(note.id));
+  selection.value.selectedNotes = [];
+  console.log('Notas eliminadas');
+  showNotification('Notas eliminadas')
+
+}
+
+// Modificar handleNoteClick para permitir eliminación con click siempre
+function handleNoteClick(event, note) {
+  if (!canClick.value) return; // Ignorar clicks durante el delay
   
-  // Si acabamos de terminar de arrastrar, no procesar el click
-  if (dragState.value.isDragging || isDragging.value) {
-    isDragging.value = false
-    dragState.value.isDragging = false
-    return
-  }
-
-  if (clickTimeout) {
-    clearTimeout(clickTimeout)
-  }
-
-  clickTimeout = setTimeout(() => {
-    if (event.ctrlKey) {
-      // Verificar si ya hay notas seleccionadas
-      if (selection.value.selectedNotes.length > 0) {
-        // Solo permitir seleccionar notas del mismo carril
-        const firstNote = selection.value.selectedNotes[0]
-        if (note.lane !== firstNote.lane) {
-          showNotification('Solo puedes seleccionar notas del mismo carril', 'error')
-          return
-        }
-      }
-
-      const index = selection.value.selectedNotes.findIndex(n => n.id === note.id)
-      if (index === -1) {
-        selection.value.selectedNotes.push(note)
-      } else {
-        selection.value.selectedNotes.splice(index, 1)
-      }
-    } else {
-      // Solo eliminar si no estamos justo después de arrastrar
-      if (!dragState.value.wasDragging) {
-        removeNote(note)
-        selection.value.selectedNotes = selection.value.selectedNotes.filter(n => n.id !== note.id)
+  event.stopPropagation();
+  event.preventDefault();
+  console.log('Click en nota:', note.id, 'Alt presionado:', event.altKey, 'Carril:', note.lane);
+  
+  if (event.altKey) {
+    // Lógica de selección
+    if (selection.value.selectedNotes.length > 0) {
+      const currentLane = selection.value.selectedNotes[0].lane;
+      if (note.lane !== currentLane) {
+        showError('No se pueden seleccionar notas de diferentes carriles', event);
+        return;
       }
     }
-  }, CLICK_DELAY)
+
+    const index = selection.value.selectedNotes.findIndex(n => n.id === note.id);
+    if (index === -1) {
+      selection.value.selectedNotes.push(note);
+      console.log('Nota agregada a selección. Total:', selection.value.selectedNotes.length);
+    } else {
+      selection.value.selectedNotes.splice(index, 1);
+      console.log('Nota removida de selección. Total:', selection.value.selectedNotes.length);
+      showError('Nota removida de selección. Total:', selection.value.selectedNotes.length);
+    }
+  } else {
+    // Click normal sin Alt: Eliminar nota individual siempre
+    console.log('Eliminando nota:', note.id);
+    showNotification('Nota eliminada')
+    notes.value = notes.value.filter(n => n.id !== note.id);
+    // También eliminar de la selección si estaba seleccionada
+    selection.value.selectedNotes = selection.value.selectedNotes.filter(n => n.id !== note.id);
+  }
+}
+
+// Mantener handleKeyDown para eliminar notas seleccionadas
+function handleKeyDown(event) {
+  console.log('Tecla presionada:', event.key);
+  
+  if (event.key === 'Delete' || event.key === 'Backspace') {
+    event.preventDefault();
+    if (selection.value.selectedNotes.length > 0) {
+      deleteSelectedNotes();
+    }
+  }
 }
 
 // Funciones para el arrastre de notas
@@ -1035,12 +981,12 @@ const handleNoteDrag = (event) => {
 
 const stopNoteDrag = () => {
   dragState.value.isDragging = false
-  dragState.value.wasDragging = true // Marcar que acabamos de arrastrar
+  dragState.value.wasDragging = true
   
-  // Resetear el estado de arrastre después de un momento
+  // Reducir el CLICK_DELAY para que la deselección sea más rápida
   setTimeout(() => {
     dragState.value.wasDragging = false
-  }, CLICK_DELAY * 2)
+  }, CLICK_DELAY) // Usar un valor más pequeño o eliminar el delay si no es necesario
 
   document.removeEventListener('mousemove', handleNoteDrag)
   document.removeEventListener('mouseup', stopNoteDrag)
@@ -1058,11 +1004,12 @@ const updateMousePosition = (event) => {
   }
 }
 
-// Modificar el handleKeyboard para deseleccionar después de pegar
+// Modificar el handleKeyboard para usar Alt
 const handleKeyboard = (event) => {
-  if (!event.ctrlKey) return
+  if (!event.altKey) return
 
   if (event.key.toLowerCase() === COPY_KEY) {
+    // Alt + C: Copiar
     if (selection.value.selectedNotes.length > 0) {
       const firstNoteTime = Math.min(...selection.value.selectedNotes.map(n => n.time))
       clipboard.value = selection.value.selectedNotes.map(note => ({
@@ -1077,6 +1024,7 @@ const handleKeyboard = (event) => {
   }
 
   if (event.key.toLowerCase() === PASTE_KEY) {
+    // Alt + V: Pegar
     if (clipboard.value.length > 0) {
       const lanesContainer = document.querySelector('.col-span-9')
       if (!lanesContainer) return
@@ -1095,8 +1043,6 @@ const handleKeyboard = (event) => {
         
         notes.value.push(...newNotes)
         notes.value.sort((a, b) => a.time - b.time)
-        
-        // Deseleccionar las notas después de pegar
         selection.value.selectedNotes = []
         
         showNotification(`Pegadas ${newNotes.length} notas en carril ${targetLane + 1}`)
@@ -1107,21 +1053,34 @@ const handleKeyboard = (event) => {
       showNotification('No hay notas copiadas para pegar', 'error')
     }
   }
+
+  // Alt + A: Seleccionar todo
+  if (event.key.toLowerCase() === 'a') {
+    event.preventDefault()
+    selection.value.selectedNotes = [...notes.value]
+    showNotification(`Seleccionadas ${notes.value.length} notas`)
+  }
 }
 
-// Añadir información de atajos de teclado
+// Actualizar la información de atajos de teclado
 const shortcuts = [
-  { key: 'Ctrl + Click', description: 'Iniciar selección' },
-  { key: 'Ctrl + Shift + Click', description: 'Extender selección' },
-  { key: 'Ctrl + C', description: 'Copiar notas seleccionadas' },
-  { key: 'Ctrl + V', description: 'Pegar notas' },
-  { key: 'Ctrl + A', description: 'Seleccionar todo' }
+  { key: 'Alt + Click', description: 'Iniciar selección' },
+  { key: 'Alt + Shift + Click', description: 'Extender selección' },
+  { key: 'Alt + C', description: 'Copiar notas seleccionadas' },
+  { key: 'Alt + V', description: 'Pegar notas' },
+  { key: 'Alt + A', description: 'Seleccionar todo' }
 ]
 
 // Añadir event listeners en onMounted
 onMounted(() => {
+  selection.value.selectedNotes = [];
   window.addEventListener('keydown', handleKeyboard)
   window.addEventListener('mousemove', updateMousePosition)
+  const container = document.querySelector('.editor-container')
+  if (container) {
+    container.focus()
+    console.log('Editor container focused, selección limpia')
+  }
 })
 
 // Limpiar event listeners en onUnmounted
@@ -1180,6 +1139,42 @@ const handleProgressClick = (event, side) => {
   currentTime.value = Math.min(newTime, duration.value)
   audio.value.currentTime = currentTime.value
 }
+
+
+
+// Limpiar selección al hacer click en el editor
+function handleEditorClick(event) {
+  // Si el click no fue en una nota, limpiar selección
+  if (event.target.closest('.note-wrapper') === null) {
+    selection.value.selectedNotes = [];
+    console.log('Selección limpiada');
+  }
+}
+
+// Modificar handleKeyUp para ser más inmediato
+function handleKeyUp(event) {
+  if (event.key === 'Alt') {
+    console.log('Alt liberado');
+    canClick.value = false;
+    
+    // Limpiar timeout existente si hay uno
+    if (altReleaseTimeout.value) {
+      clearTimeout(altReleaseTimeout.value);
+    }
+    
+    // Esperar antes de permitir clicks
+    altReleaseTimeout.value = setTimeout(() => {
+      canClick.value = true;
+    }, 300); // 300ms de delay, ajusta según necesites
+  }
+}
+
+// Agregar watch para debugging
+watch(notes, (newNotes) => {
+  console.log('=== Debug notes ===');
+  console.log('Número total de notas:', newNotes.length);
+  console.log('Últimas notas agregadas:', newNotes.slice(-3));
+}, { deep: true });
 </script>
 
 <style scoped>
