@@ -186,7 +186,22 @@
             <label class="text-white font-game mb-1 block">Título</label>
             <input v-model="formData.title" type="text" class="config-input">
           </div>
-
+          <div class="mb-4">
+            <label class="block text-white mb-2">Imagen del Mapa</label>
+            <input 
+                type="file" 
+                @change="formData.image = $event.target.files[0]"
+                accept="image/png, image/jpeg"
+                class="config-input"
+            >
+            <p class="text-sm text-gray-400 mt-2">
+                La imagen debe ser cuadrada de 96x96 píxeles.
+            </p>
+          </div>
+          <div>
+            <label class="text-white font-game mb-1 block">Video</label>
+            <input type="file" @change="handleVideoUpload" accept="video/*" class="config-input">
+          </div>
           <div class="map-config-item">
             <label class="text-white font-game mb-1 block">Artista</label>
             <input v-model="formData.artist" type="text" class="config-input">
@@ -436,7 +451,9 @@ const formData = ref({
   bpm: 120,
   difficulty: 'normal',
   audio: null,
-  notes: []
+  notes: [],
+  image: null,
+  video: null
 })
 
 const pixelsPerBeat = computed(() => scrollSpeed.value)
@@ -523,6 +540,20 @@ function handleAudioUpload(event) {
       duration.value = audio.value.duration
       audioLoaded.value = true
     })
+  }
+}
+
+function handleVideoUpload(event) {
+  const file = event.target.files[0]
+  if (file) {
+    formData.value.video = file
+  }
+}
+function handleImageUpload(event) {
+  const file = event.target.files[0]
+  if (file) {
+    formData.value.image = file
+    console.log(file);
   }
 }
 
@@ -787,6 +818,8 @@ async function saveMap() {
     submitData.append('difficulty', formData.value.difficulty)
     submitData.append('audio', formData.value.audio)
     submitData.append('notes', JSON.stringify(notes.value))
+    submitData.append('image', formData.value.image)
+    submitData.append('video', formData.value.video)
 
     const response = await axios.post(route('maps.store'), submitData, {
       headers: {
@@ -798,7 +831,6 @@ async function saveMap() {
     if (response.data.success) {
       showNotification('¡Mapa guardado con éxito!')
       setTimeout(() => {
-        router.visit(route('maps.index'))
       }, 1500)
     }
   } catch (error) {

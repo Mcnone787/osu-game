@@ -10,14 +10,17 @@ class Map extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'title',
         'artist',
         'difficulty',
         'bpm',
         'audio_path',
         'notes',
-        'user_id',
-        'slug'
+        'slug',
+        'image_path',
+        'video_path',
+        'thumbnail_path'
     ];
 
     protected $casts = [

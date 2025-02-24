@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Intervention\Image\Facades\Image;
 
 class MapController extends Controller
 {
@@ -43,12 +44,15 @@ class MapController extends Controller
     {
         try {
             // Validación básica sin el archivo
+
             $request->validate([
                 'title' => 'required|string|max:255',
                 'artist' => 'required|string|max:255',
                 'bpm' => 'required|integer|min:1',
                 'difficulty' => 'required|in:easy,normal,hard,expert',
-                'notes' => 'required|json'
+                'notes' => 'required|json',
+                'image' => 'nullable|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'video' => 'nullable|mimes:mp4,mov,avi,wmv,flv,webm|max:20480'
             ]);
 
             // Validación manual del archivo
@@ -57,37 +61,31 @@ class MapController extends Controller
             }
 
             $file = $request->file('audio');
-            
-            // Obtener la extensión real del archivo
-            $extension = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
-            
-            // Lista de extensiones permitidas
-            $allowedExtensions = ['mp3', 'wav', 'ogg'];
-            
-            // Validar extensión
-            if (!in_array($extension, $allowedExtensions)) {
-                throw new \Exception('El tipo de archivo no es válido. Se permiten: ' . implode(', ', $allowedExtensions));
-            }
+            $image = $request->file('image');
+            $video = $request->file('video');
+            $this->validateFilesExtension($file, ['mp3', 'wav', 'ogg']);
+            $this->validateFilesExtension($image, ['jpeg', 'png', 'jpg', 'gif', 'svg']);
+            $this->validateFilesExtension($video, ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm']);
+
 
             // Verificar que el archivo es válido
             if (!$file->isValid()) {
                 throw new \Exception('El archivo está corrupto o es inválido');
             }
 
-            // Log de información del archivo
-            \Log::info('Información del archivo:', [
-                'nombre_original' => $file->getClientOriginalName(),
-                'extension' => $extension,
-                'mime_type' => $file->getMimeType(),
-                'tamaño' => $file->getSize()
-            ]);
-
+           
+            $extension = $file->getClientOriginalExtension();
+            $imageExtension = $image->getClientOriginalExtension();
+            $videoExtension = $video->getClientOriginalExtension();
             // Generar nombre único para el archivo
             $fileName = time() . '_' . \Str::random(10) . '.' . $extension;
-            
+            $imageName = time() . '_' . \Str::random(10) . '.' . $imageExtension;
+            $videoName = time() . '_' . \Str::random(10) . '.' . $videoExtension;
             // Intentar guardar el archivo
             $audioPath = $file->storeAs('maps/audio', $fileName, 'public');
-            
+            $imagePath = $image->storeAs('maps/image', $imageName, 'public');
+            $videoPath = $video->storeAs('maps/video', $videoName, 'public');
+            $thumbnailPath = $image->storeAs('maps/thumbnails', $imageName, 'public');
             if (!$audioPath) {
                 throw new \Exception('Error al guardar el archivo de audio');
             }
@@ -95,6 +93,8 @@ class MapController extends Controller
             // Generar slug único
             $slug = \Str::slug($request->title . '-' . \Str::random(8));
 
+            // Procesar imagen si existe
+         
             // Crear el mapa
             $map = Map::create([
                 'user_id' => auth()->id(),
@@ -104,7 +104,10 @@ class MapController extends Controller
                 'difficulty' => $request->difficulty,
                 'audio_path' => $audioPath,
                 'notes' => $request->notes,
-                'slug' => $slug
+                'slug' => $slug,
+                'image_path' => $imagePath,
+                'thumbnail_path' => $thumbnailPath,
+                'video_path' => $videoPath ?? null
             ]);
 
             return response()->json([
@@ -114,15 +117,18 @@ class MapController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            \Log::error('Error al guardar mapa:', [
-                'mensaje' => $e->getMessage(),
-                'archivo' => $e->getFile(),
-                'linea' => $e->getLine()
-            ]);
-            
-            // Si algo falla y se subió el archivo, eliminarlo
+            // Limpiar archivos si algo falla
             if (isset($audioPath) && Storage::disk('public')->exists($audioPath)) {
                 Storage::disk('public')->delete($audioPath);
+            }
+            if (isset($imagePath) && Storage::disk('public')->exists($imagePath)) {
+                Storage::disk('public')->delete($imagePath);
+            }
+            if (isset($videoPath) && Storage::disk('public')->exists($videoPath)) {
+                Storage::disk('public')->delete($videoPath);
+            }
+            if (isset($thumbnailPath) && Storage::disk('public')->exists($thumbnailPath)) {
+                Storage::disk('public')->delete($thumbnailPath);
             }
 
             return response()->json([
@@ -171,7 +177,20 @@ class MapController extends Controller
             ], 500);
         }
     }
-
+    public function validateFilesExtension($file, $allowedExtensions)
+    {
+        $extension = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
+        if (!in_array($extension, $allowedExtensions)) {
+            throw new \Exception('El tipo de archivo no es válido. Se permiten: ' . implode(', ', $allowedExtensions));
+        }
+         // Log de información del archivo
+         \Log::info('Información del archivo:', [
+            'nombre_original' => $file->getClientOriginalName(),
+            'extension' => $extension,
+            'mime_type' => $file->getMimeType(),
+            'tamaño' => $file->getSize()
+        ]);
+    }
     public function show(Map $map)
     {
         return response()->json([
