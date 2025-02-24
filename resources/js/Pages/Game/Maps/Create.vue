@@ -877,6 +877,15 @@ function handleNoteClick(event, note) {
   
   event.stopPropagation();
   event.preventDefault();
+  
+  // Si la nota está siendo arrastrada o está en una selección que se está arrastrando, ignorar el click
+  if (dragState.value.isDragging && 
+      (dragState.value.selectedNotes.includes(note) || 
+       selection.value.selectedNotes.includes(note))) {
+    console.log('Click ignorado en nota arrastrada:', note.id);
+    return;
+  }
+  
   console.log('Click en nota:', note.id, 'Alt presionado:', event.altKey, 'Carril:', note.lane);
   
   if (event.altKey) {
@@ -884,7 +893,7 @@ function handleNoteClick(event, note) {
     if (selection.value.selectedNotes.length > 0) {
       const currentLane = selection.value.selectedNotes[0].lane;
       if (note.lane !== currentLane) {
-        showError('No se pueden seleccionar notas de diferentes carriles', event);
+        showNotification('No se pueden seleccionar notas de diferentes carriles', event);
         return;
       }
     }
@@ -896,15 +905,17 @@ function handleNoteClick(event, note) {
     } else {
       selection.value.selectedNotes.splice(index, 1);
       console.log('Nota removida de selección. Total:', selection.value.selectedNotes.length);
-      showError('Nota removida de selección. Total:', selection.value.selectedNotes.length);
+      showNotification('Nota removida de selección. Total:', selection.value.selectedNotes.length);
     }
   } else {
-    // Click normal sin Alt: Eliminar nota individual siempre
-    console.log('Eliminando nota:', note.id);
-    showNotification('Nota eliminada')
-    notes.value = notes.value.filter(n => n.id !== note.id);
-    // También eliminar de la selección si estaba seleccionada
-    selection.value.selectedNotes = selection.value.selectedNotes.filter(n => n.id !== note.id);
+    // Click normal sin Alt: Verificar si la nota está seleccionada antes de eliminar
+    if (!selection.value.selectedNotes.includes(note)) {
+      console.log('Eliminando nota:', note.id);
+      showNotification('Nota eliminada')
+      notes.value = notes.value.filter(n => n.id !== note.id);
+      // También eliminar de la selección si estaba seleccionada
+      selection.value.selectedNotes = selection.value.selectedNotes.filter(n => n.id !== note.id);
+    }
   }
 }
 
