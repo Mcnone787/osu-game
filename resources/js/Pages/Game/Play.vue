@@ -1,26 +1,14 @@
 <template>
   <div class="min-h-screen bg-dark flex flex-col">
     <!-- Header -->
-    <header class="bg-black border-b-2 border-pink-500">
-      <div class="container mx-auto px-8 py-4">
-        <div class="flex justify-between items-center">
-          <div class="flex items-center gap-8">
-            <h1 class="font-game text-4xl">
-              <span class="text-white">RHYTHM</span>
-              <span class="text-pink-500">/</span>
-              <span class="text-purple-500">MASTER</span>
-            </h1>
-          </div>
-          <div class="flex items-center gap-6">
-            <span class="text-gray-400 font-game">Playing as</span>
-            <span class="text-white font-game text-xl" 
-                  :class="{ 'text-gray-400': currentUser.guest }">
-                {{ currentUser.name }}
-            </span>
-          </div>
-        </div>
-      </div>
-    </header>
+    <GameHeader 
+      title="BEAT" 
+      subtitle="MASTER"
+      :show-back="true"
+      :back-url="route('game.home')"
+    >
+ 
+    </GameHeader>
 
     <!-- Main content -->
     <div class="flex-1 grid grid-cols-12 h-[calc(100vh-5rem)]">
@@ -156,6 +144,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { router } from '@inertiajs/vue3'
 import axios from 'axios'
 import DropdownSelector from '@/Components/DropdownSelector.vue'
+import GameHeader from '@/Components/GameHeader.vue'
 import { GlobeAltIcon, UserGroupIcon, FlagIcon } from '@heroicons/vue/24/outline'
 import { markRaw } from 'vue'
 
