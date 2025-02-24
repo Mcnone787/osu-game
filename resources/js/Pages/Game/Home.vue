@@ -208,7 +208,7 @@
             }"
             @click="(e) => handleMenuItemClick(item, e)"
           >
-            <span class="relative z-10" :class="{ 'opacity-0': itemWidths[index] < 150 }">
+            <span class="relative z-10" >
               {{ item.text }}
             </span>
           </component>
