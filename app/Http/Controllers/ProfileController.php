@@ -60,4 +60,16 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    public function show()
+    {
+        return Inertia::render('Game/Profile', [
+            'user' => auth()->user(),
+            'stats' => [
+                'totalGames' => 0, // Aquí pondrías los datos reales
+                'accuracy' => '0%',
+                'rank' => 'N/A'
+            ],
+        ]);
+    }
 }

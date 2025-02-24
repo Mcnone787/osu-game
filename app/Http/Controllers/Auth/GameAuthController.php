@@ -82,4 +82,9 @@ class GameAuthController extends Controller
             'success' => true
         ]);
     }
+
+    function profile()
+    {
+        return Inertia::render('Game/Profile');
+    }
 }

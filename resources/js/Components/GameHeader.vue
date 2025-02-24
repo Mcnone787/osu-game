@@ -43,8 +43,8 @@
   
             <h1 class="font-game text-4xl" v-if="title || subtitle">
               <span class="text-white">{{ title }}</span>
-              <span class="text-pink-500">/</span>
-              <span class="text-purple-500">{{ subtitle }}</span>
+              <span class="text-pink-500" v-if="subtitle">/</span>
+              <span class="text-purple-500" v-if="subtitle">{{ subtitle }}</span>
             </h1>
           </div>
   
