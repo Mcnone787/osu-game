@@ -121,28 +121,10 @@
                     </div>
 
                     <!-- Líneas de medio beat (1/2) -->
-                    <template v-if="snapDivision >= 2">
-                      <div v-for="beat in totalBeats * 2" :key="`half-${beat}`"
-                           class="beat-line half"
-                           :style="{ top: `${beat * (beatSpacing/2)}px` }">
-                      </div>
-                    </template>
-
-                    <!-- Líneas de cuarto (1/4) -->
-                    <template v-if="snapDivision >= 4">
-                      <div v-for="beat in totalBeats * 4" :key="`quarter-${beat}`"
-                           class="beat-line quarter"
-                           :style="{ top: `${beat * (beatSpacing/4)}px` }">
-                      </div>
-                    </template>
-
-                    <!-- Líneas de octavo (1/8) -->
-                    <template v-if="snapDivision >= 8">
-                      <div v-for="beat in totalBeats * 8" :key="`eighth-${beat}`"
-                           class="beat-line eighth"
-                           :style="{ top: `${beat * (beatSpacing/8)}px` }">
-                      </div>
-                    </template>
+                    <div v-for="beat in totalBeats * 2" :key="`half-${beat}`"
+                         class="beat-line half"
+                         :style="{ top: `${beat * (beatSpacing/2)}px` }">
+                    </div>
                   </template>
                 </div>
                 
@@ -1259,27 +1241,20 @@ watch(notes, (newNotes) => {
 }
 
 .beat-line.main {
-  @apply h-0.5 bg-purple-500/60;
+  @apply h-0.5 bg-purple-500/40;
 }
 
 .beat-line.half {
-  @apply h-px bg-purple-500/40;
-}
-
-.beat-line.quarter {
   @apply h-px bg-purple-500/30;
 }
 
-.beat-line.eighth {
-  @apply h-px bg-purple-500/20;
+/* Hacer las líneas más visibles en hover del carril */
+.lane-column:hover .beat-line.main {
+  @apply bg-purple-400/50;
 }
 
-/* Hacer las líneas más visibles en hover */
-
-
-/* Añadir transición suave */
-.beat-line {
-  transition: opacity 0.2s, background-color 0.2s;
+.lane-column:hover .beat-line.half {
+  @apply bg-purple-400/40;
 }
 
 .note-wrapper {
