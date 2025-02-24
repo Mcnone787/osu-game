@@ -1,5 +1,63 @@
 <template>
   <div class="min-h-screen bg-dark flex flex-col">
+    <!-- Header con controles de audio -->
+    <div class="bg-black border-b border-purple-900">
+      <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between h-16">
+          <!-- Título y navegación -->
+          <div class="flex items-center gap-4">
+            <Link :href="route('maps.index')" 
+                  class="text-white/70 hover:text-white transition-colors">
+              <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <h1 class="text-2xl font-game bg-gradient-to-r from-white via-purple-400 to-pink-500 text-transparent bg-clip-text">
+              MAP/CREATOR
+            </h1>
+          </div>
+
+          <!-- Controles de Audio -->
+          <div class="flex items-center gap-4 flex-1 max-w-2xl mx-4">
+            <span class="text-white/70 font-game text-sm">{{ formatTime(currentTime) }}</span>
+            
+            <div class="flex-1">
+              <div class="audio-progress-container" 
+                   @click="handleProgressClick($event, 'left')">
+                <div class="audio-progress-bar"
+                     :class="{ 'progress-complete': progressPercentage > 50 }"
+                     :style="{ 
+                       width: progressPercentage <= 50 
+                         ? (progressPercentage * 2) + '%' 
+                         : '100%'
+                     }">
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <button @click="togglePlayback" 
+                      class="audio-control-btn">
+                <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path v-if="!isPlaying" 
+                        stroke-linecap="round" 
+                        stroke-linejoin="round" 
+                        stroke-width="2" 
+                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                  <path v-else
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 9v6m4-6v6" />
+                </svg>
+              </button>
+              <span class="text-white/70 font-game text-sm">{{ formatTime(duration) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <GameHeader 
       title="MAP" 
       subtitle="CREATOR"
@@ -25,6 +83,66 @@
            @mousemove="updateMousePosition">
         <!-- Receptores fijos en la parte inferior -->
         <div class="fixed-receptors">
+          <!-- Controles de Audio -->
+          <div class="audio-controls-container mb-8">
+            <div class="flex items-center gap-4 px-4 py-3">
+              <span class="text-white/70 font-game text-sm">{{ formatTime(currentTime) }}</span>
+              
+              <div class="flex-1 relative flex items-center gap-4">
+                <!-- Primera mitad de la barra -->
+                <div class="flex-1">
+                  <div class="audio-progress-container" 
+                       @click="handleProgressClick($event, 'left')">
+                    <div class="audio-progress-bar"
+                         :class="{ 'progress-complete': progressPercentage > 50 }"
+                         :style="{ 
+                           width: progressPercentage <= 50 
+                             ? (progressPercentage * 2) + '%' 
+                             : '100%'
+                         }">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Botón de Play/Pause centrado -->
+                <div class="play-pause-container">
+                  <button @click="togglePlayback" 
+                          class="audio-control-btn">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path v-if="!isPlaying" 
+                            stroke-linecap="round" 
+                            stroke-linejoin="round" 
+                            stroke-width="2" 
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path v-else
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 9v6m4-6v6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Segunda mitad de la barra -->
+                <div class="flex-1">
+                  <div class="audio-progress-container" 
+                       @click="handleProgressClick($event, 'right')">
+                    <div class="audio-progress-bar"
+                         :style="{ 
+                           width: progressPercentage > 50 
+                             ? ((progressPercentage - 50) * 2) + '%' 
+                             : '0%'
+                         }">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <span class="text-white/70 font-game text-sm">{{ formatTime(duration) }}</span>
+            </div>
+          </div>
+
+          <!-- Receptores de teclas -->
           <div class="flex">
             <div v-for="i in 4" :key="i" class="flex-1">
               <div class="lane-receptor">
@@ -150,39 +268,6 @@
             <input v-model="formData.artist" type="text" class="config-input">
           </div>
 
-          <!-- Controles de Audio -->
-          <div class="map-config-item">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-white font-game text-sm">{{ formatTime(currentTime) }}</span>
-              <div class="flex items-center gap-2">
-                <!-- Botón de Play/Pause -->
-                <button @click="togglePlayback" 
-                        class="audio-control-btn">
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path v-if="!isPlaying" 
-                          stroke-linecap="round" 
-                          stroke-linejoin="round" 
-                          stroke-width="2" 
-                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path v-else
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M10 9v6m4-6v6" />
-                  </svg>
-                </button>
-                <span class="text-white font-game text-sm">{{ formatTime(duration) }}</span>
-              </div>
-            </div>
-            <!-- Barra de progreso -->
-            <div class="audio-progress-container"
-                 @click="seekAudio">
-              <div class="audio-progress-bar"
-                   :style="{ width: `${(currentTime / duration) * 100}%` }">
-              </div>
-            </div>
-          </div>
-
           <!-- Teclas para mapeo -->
           <div class="map-config-item">
             <label class="text-white font-game mb-1 block">Teclas para mapeo</label>
@@ -215,7 +300,7 @@
             </select>
           </div>
 
-          <!-- Input Range personalizado -->
+          <!-- Control de velocidad de scroll -->
           <div class="space-y-2">
             <label class="text-white">Velocidad de Scroll</label>
             <div class="custom-range-container"
@@ -227,11 +312,13 @@
               <!-- Track base -->
               <div class="range-track">
                 <!-- Track de progreso -->
-                <div class="range-progress" :style="{ width: `${progressPercentage}%` }"></div>
+                <div class="range-progress" 
+                     :style="{ width: `${((scrollSpeed - 50) / 150) * 100}%` }">
+                </div>
               </div>
               <!-- Thumb -->
               <div class="range-thumb" 
-                   :style="{ left: `${progressPercentage}%` }"
+                   :style="{ left: `${((scrollSpeed - 50) / 150) * 100}%` }"
                    :class="{ 'dragging': isDragging }">
                 <!-- Valor actual -->
                 <div class="range-value">{{ scrollSpeed }}px</div>
@@ -447,7 +534,8 @@ const maxValue = 200
 
 // Calcular el porcentaje de progreso
 const progressPercentage = computed(() => {
-  return ((scrollSpeed.value - minValue) / (maxValue - minValue)) * 100
+  if (!duration.value) return 0
+  return (currentTime.value / duration.value) * 100
 })
 
 const notifications = ref([])
@@ -753,33 +841,18 @@ function startDragging() {
 
 // Manejar el arrastre
 function handleDrag(event) {
-  if (!isDragging.value) return
+  if (!isDragging.value || !rangeContainer.value) return
   
   const rect = rangeContainer.value.getBoundingClientRect()
-  const percentage = Math.max(0, Math.min(100, 
-    ((event.clientX - rect.left) / rect.width) * 100
-  ))
+  const percentage = (event.clientX - rect.left) / rect.width
   
-  // Actualizar inmediatamente el valor
-  requestAnimationFrame(() => {
-    scrollSpeed.value = Math.round(
-      minValue + (percentage / 100) * (maxValue - minValue)
-    )
-  })
+  // Limitar entre 50 y 200
+  scrollSpeed.value = Math.min(200, Math.max(50, Math.round(percentage * 150 + 50)))
 }
 
 // Detener el arrastre
 function stopDragging() {
   isDragging.value = false
-  dragState.value.wasDragging = true // Marcar que acabamos de arrastrar
-  
-  // Resetear el estado de arrastre después de un momento
-  setTimeout(() => {
-    dragState.value.wasDragging = false
-  }, CLICK_DELAY * 2)
-
-  document.removeEventListener('mousemove', handleNoteDrag)
-  document.removeEventListener('mouseup', stopNoteDrag)
 }
 
 async function saveMap() {
@@ -1089,21 +1162,23 @@ const showNotification = (message, type = 'success') => {
 }
 
 // Añadir función para buscar en el audio
-const seekAudio = (event) => {
+const handleProgressClick = (event, side) => {
   if (!audio.value) return
   
   const container = event.currentTarget
   const rect = container.getBoundingClientRect()
   const clickX = event.clientX - rect.left
   const percentage = clickX / rect.width
-  
-  const newTime = duration.value * percentage
-  currentTime.value = newTime
-  audio.value.currentTime = newTime
-  
-  if (!isPlaying.value) {
-    showNotification('Tiempo actualizado')
+
+  let newTime
+  if (side === 'left') {
+    newTime = (percentage * 0.5) * duration.value
+  } else {
+    newTime = (0.5 + percentage * 0.5) * duration.value
   }
+
+  currentTime.value = Math.min(newTime, duration.value)
+  audio.value.currentTime = currentTime.value
 }
 </script>
 
@@ -1176,6 +1251,7 @@ const seekAudio = (event) => {
          bg-gradient-to-t from-black to-transparent
          pb-4 pt-8;
   z-index: 10;
+  @apply space-y-8;
 }
 
 .lane-receptor {
@@ -1576,17 +1652,20 @@ const seekAudio = (event) => {
 
 .audio-control-btn {
   @apply p-2 rounded-full
-         bg-purple-900/40 
+         bg-black/80 
          text-white/70
          hover:bg-purple-800/50
          hover:text-white
          transition-all duration-200
          border border-purple-500/30
-         hover:border-purple-500/50;
+         hover:border-purple-500/50
+         shadow-[0_0_15px_rgba(168,85,247,0.3)]
+         hover:scale-110
+         backdrop-blur-sm;
 }
 
 .audio-progress-container {
-  @apply h-2 bg-purple-900/30 
+  @apply h-1.5 bg-purple-900/30 
          rounded-full cursor-pointer
          relative overflow-hidden
          border border-purple-500/30;
@@ -1597,5 +1676,16 @@ const seekAudio = (event) => {
          from-pink-500 to-purple-600
          absolute left-0 top-0
          transition-all duration-100;
+}
+
+.progress-complete {
+  @apply opacity-50;
+}
+
+.play-pause-container {
+  @apply z-10 
+         flex items-center justify-center
+         relative
+         -mx-2; /* Ajuste negativo para compensar el padding del botón */
 }
 </style> 
