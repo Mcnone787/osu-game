@@ -48,7 +48,7 @@
                 <div class="play-pause-container">
                   <button @click="togglePlayback" 
                           class="audio-control-btn">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-[2.25rem] h-[2.25rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path v-if="!isPlaying" 
                             stroke-linecap="round" 
                             stroke-linejoin="round" 
@@ -1606,8 +1606,8 @@ watch(notes, (newNotes) => {
 }
 
 .audio-control-btn {
-  @apply p-2 rounded-full
-         bg-black/80 
+  @apply p-[0.5rem] rounded-full
+         bg-[#472169ad]
          text-white/70
          hover:bg-purple-800/50
          hover:text-white
