@@ -13,7 +13,10 @@
           </div>
           <div class="flex items-center gap-6">
             <span class="text-gray-400 font-game">Playing as</span>
-            <span class="text-white font-game text-xl">Guest</span>
+            <span class="text-white font-game text-xl" 
+                  :class="{ 'text-gray-400': currentUser.guest }">
+                {{ currentUser.name }}
+            </span>
           </div>
         </div>
       </div>
@@ -23,8 +26,16 @@
     <div class="flex-1 grid grid-cols-12 h-[calc(100vh-5rem)]">
       <!-- Ranking Panel (Izquierda) -->
       <div class="col-span-9 bg-black/80 p-8 text-white">
-        <div class="ranking-container">
+        <div v-if="noSongSelected" class="flex items-center justify-center h-full">
+          <div class="text-center text-gray-400">
+            <p class="text-2xl font-game mb-2">Selecciona una canción</p>
+            <p class="text-sm">para ver sus rankings</p>
+          </div>
+        </div>
+        
+        <div v-else class="ranking-container">
           <div class="mb-6">
+            <h2 class="text-2xl font-game mb-4">{{ selectedSong.title }}</h2>
             <DropdownSelector
               v-model="selectedRanking"
               :options="rankingTypes"
@@ -65,9 +76,9 @@
       </div>
 
       <!-- Song List (Derecha) -->
-      <div class="col-span-3 bg-black border-l border-purple-900 overflow-y-auto text-white">
-        <div class="song-list">
-          <div v-for="song in songs" 
+      <div class="col-span-3 bg-black border-l border-purple-900 overflow-hidden text-white">
+        <div class="song-list h-full overflow-y-auto px-2">
+          <div v-for="song in songsList" 
                :key="song.id" 
                @click="selectedSong = song"
                class="song-item"
@@ -77,7 +88,6 @@
               <img :src="song.thumbnail" alt="" class="w-24 h-24 object-cover">
               <div class="song-duration">{{ song.length }}</div>
             </div>
-            
             <!-- Información de la canción -->
             <div class="song-info">
               <h3 class="text-xl font-game mb-1 truncate">{{ song.title }}</h3>
@@ -98,6 +108,43 @@
               </div>
             </div>
           </div>
+
+          <!-- Loading y End States -->
+          <div class="mt-8 text-center">
+            <!-- Spinner mientras carga -->
+            <div v-if="isLoading" 
+                 class="inline-block animate-spin rounded-full h-8 w-8 border-4 
+                        border-purple-500 border-t-transparent">
+            </div>
+
+            <!-- Mensaje de fin -->
+            <div v-if="(reachedEnd || response?.has_more === false) && songsList.length > 0" 
+                 class="bg-gradient-to-r from-pink-600/20 to-purple-600/20 
+                        border border-pink-500/30 rounded-lg p-6 
+                        text-center animate-fadeIn mx-2 mb-4">
+              <div class="text-pink-400 font-game text-xl mb-2">
+                🎵 ¡Fin del catálogo!
+              </div>
+              <p class="text-gray-400">
+                Has descubierto todas nuestras {{ songsList.length }} melodías
+              </p>
+              <div class="mt-3 text-sm text-purple-400">
+                Vuelve pronto para encontrar nuevas canciones
+              </div>
+            </div>
+
+            <!-- No songs message -->
+            <div v-if="songsList.length === 0" 
+                 class="bg-purple-900/20 border border-purple-500/30 
+                        rounded-lg p-6 text-center mx-2">
+              <div class="text-purple-400 font-game text-xl mb-2">
+                🎵 Biblioteca vacía
+              </div>
+              <p class="text-gray-400">
+                No hay canciones disponibles en este momento
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -105,125 +152,143 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { router } from '@inertiajs/vue3'
+import axios from 'axios'
 import DropdownSelector from '@/Components/DropdownSelector.vue'
 import { GlobeAltIcon, UserGroupIcon, FlagIcon } from '@heroicons/vue/24/outline'
 import { markRaw } from 'vue'
 
 const props = defineProps({
-  songs: {
-    type: Array,
-    default: () => []
-  }
+    initialSongs: {
+        type: Object,
+        required: true
+    },
+    currentUser: {
+        type: Object,
+        default: () => ({
+            name: 'Guest',
+            guest: true
+        })
+    }
 })
 
-const selectedSong = ref(null)
-
-// Tipos de ranking disponibles
+// Definir los tipos de ranking disponibles
 const rankingTypes = [
-  { id: 'global', name: 'Global Ranking', icon: markRaw(GlobeAltIcon) },
-  { id: 'friends', name: 'Friends Ranking', icon: markRaw(UserGroupIcon) },
-  { id: 'country', name: 'Country Ranking', icon: markRaw(FlagIcon) }
+    { id: 'global', name: 'Global Ranking', icon: markRaw(GlobeAltIcon) },
+    { id: 'friends', name: 'Friends Ranking', icon: markRaw(UserGroupIcon) },
+    { id: 'country', name: 'Country Ranking', icon: markRaw(FlagIcon) }
 ]
 
-// Datos de ejemplo para cada tipo de ranking
-const mockRankings = {
-  global: [
-    {
-      position: 1,
-      player: "★ MasterRhythm ★",
-      score: 1234567,
-      accuracy: 99.87,
-      combo: "1,458",
-      date: "2024-03-15",
-      avatar: "/imgs/avatars/player1.jpg",
-      level: 99
-    },
-    {
-      position: 2,
-      player: "BeatMaster_Pro",
-      score: 1198234,
-      accuracy: 98.92,
-      combo: "1,445",
-      date: "2024-03-14",
-      avatar: "/imgs/avatars/player2.jpg",
-      level: 87
-    },
-    {
-      position: 3,
-      player: "RhythmKing",
-      score: 1165432,
-      accuracy: 98.45,
-      combo: "1,432",
-      date: "2024-03-13",
-      avatar: "/imgs/avatars/player3.jpg",
-      level: 92
-    },
-    {
-      position: 4,
-      player: "MusicNinja",
-      score: 1132789,
-      accuracy: 97.89,
-      combo: "1,421",
-      date: "2024-03-12",
-      avatar: "/imgs/avatars/player4.jpg",
-      level: 85
-    },
-    {
-      position: 5,
-      player: "BeatSaber",
-      score: 1098765,
-      accuracy: 97.34,
-      combo: "1,398",
-      date: "2024-03-11",
-      avatar: "/imgs/avatars/player5.jpg",
-      level: 78
+const currentPage = ref(1)
+const isLoading = ref(false)
+const reachedEnd = ref(false)
+const songsList = ref(props.initialSongs.data || [])
+const selectedSong = ref(null)
+const selectedRanking = ref(rankingTypes[0])
+const response = ref(null)
+
+async function loadMoreSongs() {
+    if (isLoading.value || reachedEnd.value) return
+
+    try {
+        isLoading.value = true
+        const nextPage = currentPage.value + 1
+
+        const result = await axios.get(route('game.play'), {
+            params: { page: nextPage }
+        })
+
+        response.value = result.data
+
+        if (!result.data.has_more) {
+            reachedEnd.value = true
+        }
+
+        if (result.data.data && result.data.data.length > 0) {
+            songsList.value = [...songsList.value, ...result.data.data]
+            currentPage.value = nextPage
+        } else {
+            reachedEnd.value = true
+        }
+
+    } catch (error) {
+        console.error('Error cargando más canciones:', error)
+    } finally {
+        isLoading.value = false
     }
-  ],
-  friends: [
-    {
-      position: 1,
-      player: "BestFriend123",
-      score: 1198234,
-      accuracy: 98.92,
-      combo: "1,445",
-      date: "2024-03-14",
-      avatar: "/imgs/avatars/player2.jpg",
-      level: 85
-    },
-  ],
-  country: [
-    {
-      position: 1,
-      player: "LocalChampion",
-      score: 1165432,
-      accuracy: 98.45,
-      combo: "1,432",
-      date: "2024-03-13",
-      avatar: "/imgs/avatars/player3.jpg",
-      level: 92
-    },
-  ]
 }
 
-const selectedRanking = ref(rankingTypes[0])
-const currentRankings = computed(() => mockRankings[selectedRanking.value.id])
+// Computed properties
+const currentRankings = computed(() => {
+    if (!selectedSong.value?.rankings) return []
+    return selectedSong.value.rankings[selectedRanking.value.id] || []
+})
+
+const noSongSelected = computed(() => !selectedSong.value)
+
+// Función para detectar scroll con debounce
+let scrollTimeout
+function handleScroll(e) {
+    if (scrollTimeout) clearTimeout(scrollTimeout)
+    
+    scrollTimeout = setTimeout(() => {
+        const element = e.target
+        const scrollPosition = element.scrollTop + element.clientHeight
+        const scrollHeight = element.scrollHeight
+        
+        if (scrollPosition >= scrollHeight - 100 && !isLoading.value && !reachedEnd.value) {
+            loadMoreSongs()
+        }
+    }, 100)
+}
+
+onMounted(async () => {
+    const songListElement = document.querySelector('.song-list')
+    if (songListElement) {
+        songListElement.addEventListener('scroll', handleScroll)
+    }
+    
+    // Hacer una petición inicial para verificar si hay más páginas
+    try {
+        const result = await axios.get(route('game.play'), {
+            params: { page: 1 }
+        })
+        response.value = result.data
+        if (!result.data.has_more) {
+            reachedEnd.value = true
+        }
+    } catch (error) {
+        console.error('Error en la verificación inicial:', error)
+    }
+})
+
+onUnmounted(() => {
+    const songListElement = document.querySelector('.song-list')
+    if (songListElement) {
+        songListElement.removeEventListener('scroll', handleScroll)
+    }
+    if (scrollTimeout) clearTimeout(scrollTimeout)
+})
 
 const getDifficultyClass = (difficulty) => {
-  const classes = {
-    'RAIN': 'bg-blue-500',
-    'HARD': 'bg-pink-500',
-    'INSANE': 'bg-purple-500'
-  }
-  return classes[difficulty] || 'bg-gray-500'
+    const classes = {
+        'RAIN': 'bg-blue-500',
+        'HARD': 'bg-pink-500',
+        'INSANE': 'bg-purple-500'
+    }
+    return classes[difficulty] || 'bg-gray-500'
 }
 
 const getRankClass = (position) => {
-  if (position === 1) return 'text-yellow-400 border-yellow-400'
-  if (position === 2) return 'text-gray-400 border-gray-400'
-  if (position === 3) return 'text-amber-600 border-amber-600'
-  return 'text-white border-purple-500'
+    if (position === 1) return 'text-yellow-400 border-yellow-400'
+    if (position === 2) return 'text-gray-400 border-gray-400'
+    if (position === 3) return 'text-amber-600 border-amber-600'
+    return 'text-white border-purple-500'
 }
+
+// Añade este console.log para depuración
+console.log('Initial songs:', songsList.value)
 </script>
 
 <style scoped>
@@ -236,7 +301,29 @@ const getRankClass = (position) => {
 }
 
 .song-list {
-  @apply p-2;
+  @apply py-2;
+  height: calc(100vh - 5rem); /* Altura total menos el header */
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.purple.500') theme('colors.purple.900');
+}
+
+/* Estilos para la scrollbar en webkit (Chrome, Safari, etc) */
+.song-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.song-list::-webkit-scrollbar-track {
+  @apply bg-purple-900/30;
+}
+
+.song-list::-webkit-scrollbar-thumb {
+  @apply bg-purple-500/50 rounded-full;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.song-list::-webkit-scrollbar-thumb:hover {
+  @apply bg-purple-400/50;
 }
 
 .song-item {
@@ -368,5 +455,32 @@ const getRankClass = (position) => {
 .ranking-item:nth-child(3) { animation-delay: 0.3s; }
 .ranking-item:nth-child(4) { animation-delay: 0.4s; }
 .ranking-item:nth-child(5) { animation-delay: 0.5s; }
+
+/* Añadir animaciones del spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Añadir animación fadeIn */
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 </style>
 
