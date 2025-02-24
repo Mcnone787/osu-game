@@ -41,7 +41,8 @@
           <div v-if="audioLoaded" 
                class="relative"
                :style="{ height: `${duration * pixelsPerBeat}px` }"
-               @mousedown="handleSelection">
+               @mousedown="handleSelection"
+               @contextmenu.prevent="handleRightClick">
             <!-- Carriles para notas -->
             <div class="absolute inset-0 flex">
               <div v-for="i in 4" :key="i" 
@@ -136,21 +137,65 @@
       </div>
 
       <!-- Panel de configuración -->
-      <div class="col-span-3 bg-black border-l border-purple-900 p-6">
-        <div class="space-y-6">
+      <div class="col-span-3 bg-black border-l border-purple-900 p-4 overflow-y-auto">
+        <div class="space-y-4">
           <!-- Info básica -->
           <div class="map-config-item">
-            <label class="text-white font-game mb-2 block">Título</label>
+            <label class="text-white font-game mb-1 block">Título</label>
             <input v-model="formData.title" type="text" class="config-input">
           </div>
 
           <div class="map-config-item">
-            <label class="text-white font-game mb-2 block">Artista</label>
+            <label class="text-white font-game mb-1 block">Artista</label>
             <input v-model="formData.artist" type="text" class="config-input">
           </div>
 
+          <!-- Controles de Audio -->
           <div class="map-config-item">
-            <label class="text-white font-game mb-2 block">BPM</label>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-white font-game text-sm">{{ formatTime(currentTime) }}</span>
+              <div class="flex items-center gap-2">
+                <!-- Botón de Play/Pause -->
+                <button @click="togglePlayback" 
+                        class="audio-control-btn">
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path v-if="!isPlaying" 
+                          stroke-linecap="round" 
+                          stroke-linejoin="round" 
+                          stroke-width="2" 
+                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path v-else
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M10 9v6m4-6v6" />
+                  </svg>
+                </button>
+                <span class="text-white font-game text-sm">{{ formatTime(duration) }}</span>
+              </div>
+            </div>
+            <!-- Barra de progreso -->
+            <div class="audio-progress-container"
+                 @click="seekAudio">
+              <div class="audio-progress-bar"
+                   :style="{ width: `${(currentTime / duration) * 100}%` }">
+              </div>
+            </div>
+          </div>
+
+          <!-- Teclas para mapeo -->
+          <div class="map-config-item">
+            <label class="text-white font-game mb-1 block">Teclas para mapeo</label>
+            <div class="grid grid-cols-4 gap-1">
+              <div v-for="key in ['D','F','J','K']" :key="key"
+                   class="bg-purple-900/30 py-1 px-2 rounded-lg border border-purple-500/30 text-center">
+                <span class="text-white text-sm">{{ key }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="map-config-item">
+            <label class="text-white font-game mb-1 block">BPM</label>
             <input 
               v-model="formData.bpm"
               type="number"
@@ -235,20 +280,6 @@
             </div>
           </div>
 
-          <!-- Teclas para mapeo -->
-          <div class="map-config-item">
-            <label class="text-white font-game mb-2 block">Teclas para mapeo</label>
-            <div class="grid grid-cols-4 gap-2 text-center">
-              <div v-for="key in ['D','F','J','K']" :key="key"
-                   class="bg-purple-900/30 p-2 rounded-lg border border-purple-500/30">
-                <span class="text-white">{{ key }}</span>
-              </div>
-            </div>
-            <p class="text-sm text-gray-400 mt-2">
-              Usa estas teclas o click para colocar notas
-            </p>
-          </div>
-
           <!-- Botón de guardar -->
           <button @click="saveMap"
                   class="w-full bg-purple-600 hover:bg-purple-500 
@@ -328,17 +359,45 @@
     <!-- Añadir componente de notificaciones -->
     <NotificationSystem ref="notificationSystem" />
 
-    <!-- Añadir información de atajos -->
-    <div class="fixed bottom-4 right-4 bg-black/80 p-4 rounded-lg border border-purple-500/30">
-      <h3 class="text-white font-game mb-2">Atajos de teclado</h3>
-      <ul class="space-y-1">
-        <li v-for="shortcut in shortcuts" 
-            :key="shortcut.key" 
-            class="text-sm">
-          <span class="text-purple-400">{{ shortcut.key }}</span>
-          <span class="text-white/70">: {{ shortcut.description }}</span>
-        </li>
-      </ul>
+    <!-- Reemplazar el div de atajos existente por este -->
+    <div class="fixed bottom-4 right-4 flex flex-col items-end space-y-2">
+      <!-- Panel de atajos -->
+      <Transition name="slide-fade">
+        <div v-if="showShortcuts" 
+             class="bg-black/80 p-4 rounded-lg border border-purple-500/30
+                    transform transition-all duration-300">
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-white font-game">Atajos de teclado</h3>
+            <button @click="showShortcuts = false"
+                    class="text-white/50 hover:text-white transition-colors">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <ul class="space-y-1">
+            <li v-for="shortcut in shortcuts" 
+                :key="shortcut.key" 
+                class="text-sm">
+              <span class="text-purple-400">{{ shortcut.key }}</span>
+              <span class="text-white/70">: {{ shortcut.description }}</span>
+            </li>
+          </ul>
+        </div>
+      </Transition>
+
+      <!-- Botón para mostrar atajos -->
+      <button v-if="!showShortcuts"
+              @click="showShortcuts = true"
+              class="bg-purple-900/80 p-2 rounded-lg border border-purple-500/30
+                     text-white/70 hover:text-white
+                     transform transition-all duration-300
+                     hover:bg-purple-800/90 hover:scale-105">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </button>
     </div>
   </div>
 </template>
@@ -427,19 +486,20 @@ const CLICK_DELAY = 150 // milisegundos de delay
 // Añadir ref para la posición del mouse
 const mousePosition = ref({ x: 0, y: 0 })
 
+// Añadir ref para controlar visibilidad
+const showShortcuts = ref(true) // Inicialmente visible
+
 function handleAudioUpload(event) {
   const file = event.target.files[0]
   if (file) {
-    // Validar tipo de archivo
     const validTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg']
     if (!validTypes.includes(file.type)) {
       showNotification('Formato de audio no válido. Use MP3, WAV o OGG', 'error')
-      event.target.value = '' // Limpiar input
+      event.target.value = ''
       return
     }
 
-    // Validar tamaño (10MB máximo)
-    const maxSize = 10 * 1024 * 1024 // 10MB en bytes
+    const maxSize = 10 * 1024 * 1024
     if (file.size > maxSize) {
       showNotification('El archivo es demasiado grande. Máximo 10MB', 'error')
       event.target.value = ''
@@ -724,7 +784,6 @@ function stopDragging() {
 
 async function saveMap() {
   try {
-    // Validaciones básicas
     if (!formData.value.title.trim()) {
       showNotification('El título es requerido', 'error')
       return
@@ -757,11 +816,8 @@ async function saveMap() {
     })
 
     if (response.data.success) {
-      showNotification('¡Mapa guardado con éxito!', 'success')
-      
-      // Esperar un momento para que se vea la notificación
+      showNotification('¡Mapa guardado con éxito!')
       setTimeout(() => {
-        // Redirigir al listado de mapas
         router.visit(route('maps.index'))
       }, 1500)
     }
@@ -777,42 +833,12 @@ async function saveMap() {
         showNotification('Error de validación en el formulario', 'error')
       }
     } else {
-      showNotification(
-        error.response?.data?.message || 'Error al guardar el mapa',
-        'error'
-      )
+      showNotification(error.response?.data?.message || 'Error al guardar el mapa', 'error')
     }
   } finally {
     // Desactivar spinner
     isSaving.value = false
   }
-}
-
-function showNotification(message, type = 'success') {
-  const id = Date.now()
-  notifications.value.push({
-    id,
-    message,
-    type,
-    progress: 100
-  })
-
-  // Iniciar countdown
-  const duration = 5000
-  const interval = 10
-  const step = (100 * interval) / duration
-
-  const progressInterval = setInterval(() => {
-    const notification = notifications.value.find(n => n.id === id)
-    if (notification) {
-      notification.progress -= step
-    }
-  }, interval)
-
-  setTimeout(() => {
-    clearInterval(progressInterval)
-    notifications.value = notifications.value.filter(n => n.id !== id)
-  }, duration)
 }
 
 // Función para manejar la selección
@@ -971,7 +997,7 @@ const handleKeyboard = (event) => {
         timeOffset: note.time - firstNoteTime,
         originalLane: note.lane
       }))
-      showNotification(`Copiadas ${selection.value.selectedNotes.length} notas del carril ${clipboard.value[0].originalLane + 1}`, 'success')
+      showNotification(`Copiadas ${selection.value.selectedNotes.length} notas del carril ${clipboard.value[0].originalLane + 1}`)
     } else {
       showNotification('No hay notas seleccionadas para copiar', 'error')
     }
@@ -1000,10 +1026,7 @@ const handleKeyboard = (event) => {
         // Deseleccionar las notas después de pegar
         selection.value.selectedNotes = []
         
-        showNotification(
-          `Pegadas ${newNotes.length} notas en carril ${targetLane + 1}`, 
-          'success'
-        )
+        showNotification(`Pegadas ${newNotes.length} notas en carril ${targetLane + 1}`)
       } else {
         showNotification('Coloca el cursor sobre un carril para pegar', 'error')
       }
@@ -1036,6 +1059,52 @@ onUnmounted(() => {
     clearTimeout(clickTimeout)
   }
 })
+
+// Añadir función para manejar click derecho
+const handleRightClick = (event) => {
+  const editorContainer = event.currentTarget
+  const rect = editorContainer.getBoundingClientRect()
+  const clickY = event.clientY - rect.top + editorContainer.scrollTop
+  
+  const newTime = clickY / pixelsPerBeat.value
+  
+  if (isPlaying.value) {
+    audio.value.pause()
+    isPlaying.value = false
+  }
+  
+  currentTime.value = newTime
+  if (audio.value) {
+    audio.value.currentTime = newTime
+  }
+
+  showNotification('Playhead movido')
+}
+
+// Función helper para mostrar notificaciones
+const showNotification = (message, type = 'success') => {
+  if (notificationSystem.value) {
+    notificationSystem.value.showNotification(message, type)
+  }
+}
+
+// Añadir función para buscar en el audio
+const seekAudio = (event) => {
+  if (!audio.value) return
+  
+  const container = event.currentTarget
+  const rect = container.getBoundingClientRect()
+  const clickX = event.clientX - rect.left
+  const percentage = clickX / rect.width
+  
+  const newTime = duration.value * percentage
+  currentTime.value = newTime
+  audio.value.currentTime = newTime
+  
+  if (!isPlaying.value) {
+    showNotification('Tiempo actualizado')
+  }
+}
 </script>
 
 <style scoped>
@@ -1048,18 +1117,18 @@ onUnmounted(() => {
 }
 
 .map-config-item {
-  @apply animate-fadeIn;
+  @apply space-y-1;
 }
 
 .config-input {
-  @apply w-full bg-purple-900/30 
-         border border-purple-500/40 
-         rounded-lg px-4 py-2 
-         text-white transition-all
-         focus:border-pink-500/50 
-         focus:outline-none
-         focus:ring-2 
-         focus:ring-pink-500/20;
+  @apply w-full px-3 py-2
+         bg-purple-900/30 rounded-lg
+         border border-purple-500/30
+         text-white text-sm
+         focus:outline-none focus:ring-1
+         focus:ring-purple-500/50
+         focus:border-purple-500/50
+         placeholder-white/30;
 }
 
 .difficulty-badge {
@@ -1199,7 +1268,10 @@ onUnmounted(() => {
 }
 
 .playhead {
-  @apply absolute w-full h-0.5 bg-white/50;
+  @apply absolute left-0 right-0 h-0.5
+         bg-gradient-to-r from-pink-500 via-white to-purple-500
+         shadow-[0_0_8px_rgba(255,255,255,0.8)]
+         z-50;
 }
 
 .snap-line {
@@ -1230,32 +1302,35 @@ onUnmounted(() => {
 }
 
 .snap-button {
-  @apply px-3 py-2 rounded-lg
-         bg-purple-900/30 text-white
+  @apply px-3 py-2 
+         bg-purple-900/30 
          border border-purple-500/30
+         text-white/70 
+         rounded-lg
          transition-all duration-200
-         hover:bg-purple-900/50
-         text-sm;
-  font-family: 'GameFont', sans-serif;
+         hover:bg-purple-800/40
+         hover:border-purple-500/50
+         hover:text-white;
 }
 
 .snap-button.active {
-  @apply bg-pink-500/30 border-pink-500
-         shadow-[0_0_10px_rgba(236,72,153,0.3)];
+  @apply bg-purple-700/50
+         border-purple-500/70
+         text-white
+         shadow-[inset_0_0_10px_rgba(168,85,247,0.3)];
 }
 
+/* Visualización del snap */
 .snap-preview {
-  @apply h-8 relative flex items-center
-         border-l-2 border-r-2 border-purple-500/30;
+  @apply flex justify-between items-center h-8 px-2;
 }
 
 .snap-marker {
-  @apply absolute h-full w-px bg-purple-500/30
-         opacity-0 transition-opacity duration-200;
+  @apply w-0.5 h-full bg-purple-500/30 transition-all duration-200;
 }
 
 .snap-marker.visible {
-  @apply opacity-100;
+  @apply bg-purple-500/70;
 }
 
 /* Estilo para el error visual */
@@ -1352,7 +1427,7 @@ onUnmounted(() => {
 
 /* Input Range personalizado */
 .custom-range-container {
-  @apply relative h-12 cursor-pointer;
+  @apply relative h-10 cursor-pointer;
 }
 
 .range-track {
@@ -1444,5 +1519,83 @@ onUnmounted(() => {
 
 .note-wrapper.dragging .note-block {
   @apply scale-105;
+}
+
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  transform: translateX(20px);
+  opacity: 0;
+}
+
+/* Actualizar estilos para ser más compactos */
+.map-config-item {
+  @apply space-y-1;
+}
+
+.config-input {
+  @apply w-full px-3 py-2;
+}
+
+.snap-button {
+  @apply px-2 py-1 text-xs;
+}
+
+.custom-range-container {
+  @apply h-10;
+}
+
+/* Personalizar scrollbar sin usar el plugin */
+.col-span-3 {
+  scrollbar-width: thin; /* Para Firefox */
+  scrollbar-color: rgba(168, 85, 247, 0.5) rgba(88, 28, 135, 0.3); /* Para Firefox */
+}
+
+/* Para Webkit (Chrome, Safari, Edge) */
+.col-span-3::-webkit-scrollbar {
+  width: 8px;
+}
+
+.col-span-3::-webkit-scrollbar-track {
+  background: rgba(88, 28, 135, 0.3);
+  border-radius: 4px;
+}
+
+.col-span-3::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.5);
+  border-radius: 4px;
+}
+
+.col-span-3::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.7);
+}
+
+.audio-control-btn {
+  @apply p-2 rounded-full
+         bg-purple-900/40 
+         text-white/70
+         hover:bg-purple-800/50
+         hover:text-white
+         transition-all duration-200
+         border border-purple-500/30
+         hover:border-purple-500/50;
+}
+
+.audio-progress-container {
+  @apply h-2 bg-purple-900/30 
+         rounded-full cursor-pointer
+         relative overflow-hidden
+         border border-purple-500/30;
+}
+
+.audio-progress-bar {
+  @apply h-full bg-gradient-to-r 
+         from-pink-500 to-purple-600
+         absolute left-0 top-0
+         transition-all duration-100;
 }
 </style> 
