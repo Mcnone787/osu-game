@@ -843,24 +843,18 @@ async function saveMap() {
 const handleSelection = (event) => {
   if (!event.altKey) return
   
-  event.preventDefault() // Prevenir comportamiento por defecto
+  event.preventDefault()
   
   const editorContainer = document.querySelector('.editor-container')
   const rect = editorContainer.getBoundingClientRect()
   const clickY = event.clientY - rect.top + editorContainer.scrollTop
   const timeAtClick = clickY / pixelsPerBeat.value
 
-  if (event.shiftKey && selection.value.startTime !== null) {
-    // Alt + Shift + Click: Extender selección
-    selection.value.endTime = timeAtClick
-    updateSelectedNotes()
-  } else {
-    // Alt + Click: Nueva selección
-    selection.value.active = true
-    selection.value.startTime = timeAtClick
-    selection.value.endTime = timeAtClick
-    updateSelectedNotes()
-  }
+  // Solo mantener la selección simple
+  selection.value.active = true
+  selection.value.startTime = timeAtClick
+  selection.value.endTime = timeAtClick
+  updateSelectedNotes()
 }
 
 // Actualizar notas seleccionadas
@@ -1053,22 +1047,13 @@ const handleKeyboard = (event) => {
       showNotification('No hay notas copiadas para pegar', 'error')
     }
   }
-
-  // Alt + A: Seleccionar todo
-  if (event.key.toLowerCase() === 'a') {
-    event.preventDefault()
-    selection.value.selectedNotes = [...notes.value]
-    showNotification(`Seleccionadas ${notes.value.length} notas`)
-  }
 }
 
 // Actualizar la información de atajos de teclado
 const shortcuts = [
   { key: 'Alt + Click', description: 'Iniciar selección' },
-  { key: 'Alt + Shift + Click', description: 'Extender selección' },
   { key: 'Alt + C', description: 'Copiar notas seleccionadas' },
-  { key: 'Alt + V', description: 'Pegar notas' },
-  { key: 'Alt + A', description: 'Seleccionar todo' }
+  { key: 'Alt + V', description: 'Pegar notas' }
 ]
 
 // Añadir event listeners en onMounted
