@@ -21,78 +21,7 @@
            @keyup="handleKeyUp"
            tabindex="0"
            style="outline: none;">
-        <!-- Receptores fijos en la parte inferior -->
-        <div class="fixed-receptors">
-          <!-- Controles de Audio -->
-          <div class="audio-controls-container mb-8">
-            <div class="flex items-center gap-4 px-4 py-3">
-              <span class="text-white/70 font-game text-sm">{{ formatTime(currentTime) }}</span>
-              
-              <div class="flex-1 relative flex items-center gap-4">
-                <!-- Primera mitad de la barra -->
-                <div class="flex-1">
-                  <div class="audio-progress-container" 
-                       @click="handleProgressClick($event, 'left')">
-                    <div class="audio-progress-bar"
-                         :class="{ 'progress-complete': progressPercentage > 50 }"
-                         :style="{ 
-                           width: progressPercentage <= 50 
-                             ? (progressPercentage * 2) + '%' 
-                             : '100%'
-                         }">
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Botón de Play/Pause centrado -->
-                <div class="play-pause-container">
-                  <button @click="togglePlayback" 
-                          class="audio-control-btn">
-                    <svg class="w-[2.25rem] h-[2.25rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path v-if="!isPlaying" 
-                            stroke-linecap="round" 
-                            stroke-linejoin="round" 
-                            stroke-width="2" 
-                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                      <path v-else
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M10 9v6m4-6v6" />
-                    </svg>
-                  </button>
-                </div>
-
-                <!-- Segunda mitad de la barra -->
-                <div class="flex-1">
-                  <div class="audio-progress-container" 
-                       @click="handleProgressClick($event, 'right')">
-                    <div class="audio-progress-bar"
-                         :style="{ 
-                           width: progressPercentage > 50 
-                             ? ((progressPercentage - 50) * 2) + '%' 
-                             : '0%'
-                         }">
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <span class="text-white/70 font-game text-sm">{{ formatTime(duration) }}</span>
-            </div>
-          </div>
-
-          <!-- Receptores de teclas -->
-          <div class="flex">
-            <div v-for="i in 4" :key="i" class="flex-1">
-              <div class="lane-receptor">
-                <div class="key-hint">
-                  {{ ['D', 'F', 'J', 'K'][i-1] }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      
 
         <!-- Editor con scroll -->
         <div class="editor-container"
@@ -176,10 +105,82 @@
             </div>
           </div>
         </div>
+          <!-- Receptores fijos en la parte inferior -->
+          <div class="fixed-receptors">
+          <!-- Controles de Audio -->
+          <div class="audio-controls-container mb-8">
+            <div class="flex items-center gap-4 px-4 py-3">
+              <span class="text-white/70 font-game text-sm">{{ formatTime(currentTime) }}</span>
+              
+              <div class="flex-1 relative flex items-center gap-4">
+                <!-- Primera mitad de la barra -->
+                <div class="flex-1">
+                  <div class="audio-progress-container" 
+                       @click="handleProgressClick($event, 'left')">
+                    <div class="audio-progress-bar"
+                         :class="{ 'progress-complete': progressPercentage > 50 }"
+                         :style="{ 
+                           width: progressPercentage <= 50 
+                             ? (progressPercentage * 2) + '%' 
+                             : '100%'
+                         }">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Botón de Play/Pause centrado -->
+                <div class="play-pause-container">
+                  <button @click="togglePlayback" 
+                          class="audio-control-btn">
+                    <svg class="w-[2.25rem] h-[2.25rem]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path v-if="!isPlaying" 
+                            stroke-linecap="round" 
+                            stroke-linejoin="round" 
+                            stroke-width="2" 
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path v-else
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 9v6m4-6v6" />
+                    </svg>
+                  </button>
+                </div>
+
+                <!-- Segunda mitad de la barra -->
+                <div class="flex-1">
+                  <div class="audio-progress-container" 
+                       @click="handleProgressClick($event, 'right')">
+                    <div class="audio-progress-bar"
+                         :style="{ 
+                           width: progressPercentage > 50 
+                             ? ((progressPercentage - 50) * 2) + '%' 
+                             : '0%'
+                         }">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <span class="text-white/70 font-game text-sm">{{ formatTime(duration) }}</span>
+            </div>
+          </div>
+
+          <!-- Receptores de teclas -->
+          <div class="flex">
+            <div v-for="i in 4" :key="i" class="flex-1">
+              <div class="lane-receptor">
+                <div class="key-hint">
+                  {{ ['D', 'F', 'J', 'K'][i-1] }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Panel de configuración -->
-      <div class="col-span-3 bg-black border-l border-purple-900 p-4 overflow-y-auto">
+      <div class="col-span-3 bg-black border-l border-purple-900 p-4 overflow-y-auto" >
         <div class="space-y-4">
           <!-- Info básica -->
           <div class="map-config-item">
@@ -1266,13 +1267,13 @@ watch(notes, (newNotes) => {
 .editor-container {
   @apply relative overflow-y-auto;
   height: calc(100vh - 13rem); /* Ajustado para dejar espacio para los receptores */
-  margin-bottom: 4rem; /* Espacio para los receptores */
+  
 }
 
 .fixed-receptors {
-  @apply absolute bottom-0 left-0 right-0
+  @apply  bottom-0 left-0 right-0
          bg-gradient-to-t from-black to-transparent
-         pb-4 pt-8;
+          pt-8;
   z-index: 10;
   @apply space-y-8;
 }
