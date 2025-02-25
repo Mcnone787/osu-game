@@ -122,17 +122,17 @@
       <!-- Línea de tiempo -->
       <div class="timeline absolute bottom-20 left-0 right-0 h-1 bg-purple-500/30"></div>
 
-      <!-- Carriles de notas (bajados un poco más) -->
+      <!-- Carriles de notas -->
       <div class="note-lanes absolute bottom-20 left-[5%] flex gap-1 items-end">
         <div v-for="lane in 4" :key="lane" 
              class="note-lane w-20 relative" 
              style="height: calc(100vh + 5rem)">
-          <!-- Fondo del carril con gradiente -->
+          <!-- Fondo del carril con gradiente (opacidad aumentada) -->
           <div class="lane-background absolute inset-0"></div>
           
           <!-- Receptor de notas -->
           <div class="note-receptor absolute bottom-0 w-full h-16 
-                      bg-purple-500/20 rounded-lg border-2 border-purple-500/30
+                      bg-purple-900/40 rounded-lg border-2 border-purple-500/30
                       transition-all z-10"
                :class="{ 'active': activeKeys[lane-1] }">
             <span class="key-hint absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
@@ -144,7 +144,7 @@
           <!-- Notas -->
           <div v-for="note in notes.filter(n => n.lane === lane-1 && !n.hit && !n.missed)" 
                :key="note.timing"
-               class="absolute w-full h-16 bg-purple-500/40 rounded-lg border-2 
+               class="absolute w-full h-16 bg-purple-500/50 rounded-lg border-2 
                       border-purple-500/30 transition-transform z-20"
                :style="{ bottom: `${note.y}px` }">
           </div>
@@ -646,20 +646,21 @@ watch(() => props.map, async (newMap) => {
 }
 
 .lane-background {
-  @apply bg-gradient-to-b from-purple-900/20 via-purple-900/10 to-transparent
-         border-l border-r border-purple-500/20;
+  @apply bg-gradient-to-b from-purple-900/40 via-purple-900/30 to-transparent
+         border-l border-r border-purple-500/30;
   mask-image: linear-gradient(to top, black 90%, transparent);
 }
 
 .note-receptor {
-  @apply shadow-lg backdrop-blur-sm;
+  @apply shadow-lg backdrop-blur-sm
+         bg-purple-900/40;
 }
 
 .note-receptor.active {
-  @apply bg-purple-500/40 
-         border-purple-500/60 
+  @apply bg-purple-500/50 
+         border-purple-500/70 
          scale-105 
-         shadow-[0_0_15px_rgba(168,85,247,0.3)];
+         shadow-[0_0_15px_rgba(168,85,247,0.4)];
 }
 
 .key-hint {
@@ -671,7 +672,7 @@ watch(() => props.map, async (newMap) => {
 }
 
 .note {
-  @apply bg-gradient-to-b from-purple-500/40 to-pink-500/40
+  @apply bg-gradient-to-b from-purple-500/50 to-pink-500/50
          backdrop-blur-sm;
 }
 
@@ -789,6 +790,6 @@ watch(() => props.map, async (newMap) => {
 }
 
 .note {
-  @apply bg-gradient-to-b from-purple-500/40 to-pink-500/40;
+  @apply bg-gradient-to-b from-purple-500/50 to-pink-500/50;
 }
 </style> 
