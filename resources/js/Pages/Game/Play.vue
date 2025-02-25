@@ -106,22 +106,22 @@
                           <img :src="rank.avatar" :alt="rank.player" 
                                class="w-12 h-12 rounded-full border-2 border-purple-500/50">
                           <div class="absolute -bottom-1 -right-1 bg-purple-500 
-                                    text-xs px-1.5 py-px rounded-full text-[10px]">
+                                    text-xs px-1.5 py-px rounded-full text-[10px] text-white">
                             Lv.{{ rank.level }}
                           </div>
                         </div>
                         <div class="flex-1">
-                          <h3 class="text-lg font-game mb-0.5">{{ rank.player }}</h3>
+                          <h3 class="text-lg font-game mb-0.5 text-white">{{ rank.player }}</h3>
                           <div class="flex items-center gap-3">
-                            <span class="score-text text-base font-mono">
+                            <span class="score-text text-base font-mono text-white">
                               {{ rank.score.toLocaleString() }}
                             </span>
                             <span class="text-pink-400 text-sm">x{{ rank.combo }}</span>
                           </div>
                         </div>
                         <div class="text-right">
-                          <p class="text-xl font-bold text-gradient">{{ rank.accuracy }}%</p>
-                          <p class="date-text text-xs">{{ rank.date }}</p>
+                          <p class="text-xl font-bold accuracy-gradient">{{ rank.accuracy }}%</p>
+                          <p class="date-text text-xs text-gray-300">{{ rank.date }}</p>
                         </div>
                       </div>
                     </div>
@@ -144,12 +144,12 @@
             <!-- Imagen de la canción -->
             <div class="song-thumbnail">
               <img :src="song.image_path" alt="" class="w-24 h-24 object-cover">
-              <div class="song-duration">{{ song.length }}</div>
+              <div class="song-duration text-white">{{ song.length }}</div>
             </div>
             <!-- Información de la canción -->
             <div class="song-info">
-              <h3 class="text-xl font-game mb-1 truncate">{{ song.title }}</h3>
-              <p class="text-gray-400 mb-2 text-sm truncate">{{ song.artist }}</p>
+              <h3 class="text-xl font-game mb-1 truncate text-white">{{ song.title }}</h3>
+              <p class="text-gray-300 mb-2 text-sm truncate">{{ song.artist }}</p>
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
                   <span class="difficulty-badge" :class="getDifficultyClass(song.difficulty)">
@@ -678,6 +678,34 @@ console.log('Initial songs:', songsList.value)
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* Gradiente para el porcentaje de accuracy */
+.accuracy-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r 
+         from-pink-400 to-purple-400 
+         drop-shadow-[0_0_2px_rgba(236,72,153,0.3)];
+}
+
+/* Ajustes para los textos */
+.song-item h3 {
+  @apply text-white drop-shadow-sm;
+}
+
+.song-item .song-info p {
+  @apply text-gray-300;
+}
+
+.ranking-item h3 {
+  @apply text-white font-semibold drop-shadow-sm;
+}
+
+.score-text {
+  @apply text-white drop-shadow-sm;
+}
+
+.date-text {
+  @apply text-gray-300;
 }
 </style>
 
