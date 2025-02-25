@@ -143,7 +143,15 @@
                :class="{'active': selectedSong?.id === song.id}">
             <!-- Imagen de la canción -->
             <div class="song-thumbnail">
-              <img :src="song.image_path" alt="" class="w-24 h-24 object-cover">
+              <template v-if="song.image_path">
+                <img :src="song.image_path" alt="" class="w-24 h-24 object-cover">
+              </template>
+              <template v-else>
+                <svg class="w-12 h-12 text-purple-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+              </template>
               <div class="song-duration text-white">{{ song.length }}</div>
             </div>
             <!-- Información de la canción -->
