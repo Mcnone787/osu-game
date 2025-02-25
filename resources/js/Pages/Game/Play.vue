@@ -6,67 +6,126 @@
       subtitle="MASTER"
       :show-back="true"
       :back-url="route('game.home')"
-    >
- 
-    </GameHeader>
+    />
 
     <!-- Main content -->
     <div class="flex-1 grid grid-cols-12 h-[calc(100vh-5rem)]">
-      <!-- Ranking Panel (Izquierda) -->
-      <div class="col-span-9 bg-black/80 p-8 text-white">
-        <div v-if="noSongSelected" class="flex items-center justify-center h-full">
-          <div class="text-center text-gray-400">
-            <p class="text-2xl font-game mb-2">Selecciona una canción</p>
-            <p class="text-sm">para ver sus rankings</p>
-          </div>
+      <!-- Panel de Ranking (Izquierda) -->
+      <div class="col-span-9 relative overflow-hidden">
+        <!-- Fondo con efecto parallax -->
+        <div class="absolute inset-0 bg-cover bg-center bg-no-repeat blur-sm transform scale-105"
+             :style="{ backgroundImage: `url(${selectedSong?.image_path})` }">
+          <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"></div>
         </div>
-        
-        <div v-else class="ranking-container">
-          <div class="mb-6">
-            <div class="flex items-center justify-between">
-              
-              <h2 class="text-2xl font-game mb-4">{{ selectedSong.title }}</h2>
-              <button @click="startGame(selectedSong)" class="bg-gradient-to-r from-pink-600/40 to-purple-600/40 
-              hover:from-pink-500/60 hover:to-purple-500/60 
-              text-white px-6 py-2 rounded-lg transition-all
-              font-game border border-pink-500/30
-              hover:scale-105 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]
-              flex items-center gap-2">
-              Jugar
-              </button>
-            </div>
-            <DropdownSelector
-              v-model="selectedRanking"
-              :options="rankingTypes"
-            />
-          </div>
-          <div class="ranking-list space-y-3">
-            <div v-for="rank in currentRankings" :key="rank.position" 
-                 class="ranking-item group">
-              <div class="flex items-center gap-6">
-                <span class="rank-number border-2 rounded-full w-10 h-10 
-                           flex items-center justify-center text-2xl font-bold font-game"
-                      :class="getRankClass(rank.position)">
-                  #{{ rank.position }}
-                </span>
-                <div class="relative">
-                  <img :src="rank.avatar" :alt="rank.player" 
-                       class="w-12 h-12 rounded-full border-2 border-purple-500">
-                  <div class="absolute -bottom-1 -right-1 bg-purple-500 text-xs px-1.5 py-px rounded-full text-[10px]">
-                    Lv.{{ rank.level }}
-                  </div>
-                </div>
-                <div class="flex-1">
-                  <h3 class="text-lg font-game mb-0.5">{{ rank.player }}</h3>
-                  <div class="flex items-center gap-3">
-                    <span class="text-base text-gray-300 font-mono">{{ rank.score.toLocaleString() }}</span>
-                    <span class="text-pink-400 text-sm">x{{ rank.combo }}</span>
-                  </div>
 
+        <!-- Contenido del Ranking -->
+        <div class="relative h-full flex flex-col">
+          <!-- Estado sin canción seleccionada -->
+          <div v-if="noSongSelected" 
+               class="flex items-center justify-center h-full">
+            <div class="text-center space-y-4">
+              <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-purple-500/20 
+                          flex items-center justify-center">
+                <svg class="w-12 h-12 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+              </div>
+              <p class="text-2xl font-game mb-2">Selecciona una canción</p>
+              <p class="text-sm text-gray-400">para ver sus rankings</p>
+            </div>
+          </div>
+
+          <!-- Contenido cuando hay canción seleccionada -->
+          <div v-else class="h-full flex flex-col" :key="selectedSong.id">
+            <!-- Cabecera de la canción con animación mejorada -->
+            <div class="song-header p-8 bg-black/30 backdrop-blur-sm">
+              <div class="flex items-start gap-8 animate-fadeIn">
+                <!-- Imagen con animación -->
+                <div class="w-40 h-40 rounded-lg overflow-hidden border-2 border-purple-500/30 animate-scaleIn">
+                  <img :src="selectedSong.image_path" :alt="selectedSong.title" 
+                       class="w-full h-full object-cover">
                 </div>
-                <div class="text-right">
-                  <p class="text-xl font-bold text-gradient">{{ rank.accuracy }}%</p>
-                  <p class="text-xs text-gray-400">{{ rank.date }}</p>
+                
+                <!-- Información con animación -->
+                <div class="flex-1 animate-slideInRight">
+                  <h2 class="text-4xl font-game mb-2 text-white">{{ selectedSong.title }}</h2>
+                  <p class="text-xl text-gray-300 mb-4">{{ selectedSong.artist }}</p>
+                  <div class="flex items-center gap-4">
+                    <span class="difficulty-badge" :class="getDifficultyClass(selectedSong.difficulty)">
+                      {{ selectedSong.difficulty }}
+                    </span>
+                    <span class="text-gray-400 text-sm flex items-center gap-1">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      {{ selectedSong.bpm }} BPM
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Botón de jugar -->
+                <button @click="startGame(selectedSong)" 
+                        class="play-button">
+                  Jugar
+                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Selector y lista con animaciones -->
+            <div class="flex-1 p-8 overflow-hidden flex flex-col">
+              <div class="mb-6 animate-slideInDown">
+                <DropdownSelector
+                  v-model="selectedRanking"
+                  :options="rankingTypes"
+                  class="ranking-selector"
+                />
+              </div>
+
+              <!-- Lista de rankings con animaciones mejoradas -->
+              <div class="flex-1 overflow-y-auto ranking-scroll">
+                <div class="grid gap-3">
+                  <TransitionGroup
+                    name="ranking-list"
+                    tag="div"
+                    class="grid gap-3"
+                  >
+                    <div v-for="rank in currentRankings" 
+                         :key="`${selectedSong.id}-${rank.position}`"
+                         class="ranking-item">
+                      <div class="flex items-center gap-6">
+                        <span class="rank-number" :class="getRankClass(rank.position)">
+                          #{{ rank.position }}
+                        </span>
+                        <div class="relative">
+                          <img :src="rank.avatar" :alt="rank.player" 
+                               class="w-12 h-12 rounded-full border-2 border-purple-500/50">
+                          <div class="absolute -bottom-1 -right-1 bg-purple-500 
+                                    text-xs px-1.5 py-px rounded-full text-[10px]">
+                            Lv.{{ rank.level }}
+                          </div>
+                        </div>
+                        <div class="flex-1">
+                          <h3 class="text-lg font-game mb-0.5">{{ rank.player }}</h3>
+                          <div class="flex items-center gap-3">
+                            <span class="score-text text-base font-mono">
+                              {{ rank.score.toLocaleString() }}
+                            </span>
+                            <span class="text-pink-400 text-sm">x{{ rank.combo }}</span>
+                          </div>
+                        </div>
+                        <div class="text-right">
+                          <p class="text-xl font-bold text-gradient">{{ rank.accuracy }}%</p>
+                          <p class="date-text text-xs">{{ rank.date }}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </TransitionGroup>
                 </div>
               </div>
             </div>
@@ -74,8 +133,8 @@
         </div>
       </div>
 
-      <!-- Song List (Derecha) -->
-      <div class="col-span-3 bg-black border-l border-purple-900 overflow-hidden text-white">
+      <!-- Lista de canciones (Derecha) -->
+      <div class="col-span-3 bg-black/95 border-l border-purple-900/50 overflow-hidden">
         <div class="song-list h-full overflow-y-auto px-2">
           <div v-for="song in songsList" 
                :key="song.id" 
@@ -84,7 +143,7 @@
                :class="{'active': selectedSong?.id === song.id}">
             <!-- Imagen de la canción -->
             <div class="song-thumbnail">
-              <img :src="song.thumbnail" alt="" class="w-24 h-24 object-cover">
+              <img :src="song.image_path" alt="" class="w-24 h-24 object-cover">
               <div class="song-duration">{{ song.length }}</div>
             </div>
             <!-- Información de la canción -->
@@ -151,7 +210,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { router } from '@inertiajs/vue3'
 import axios from 'axios'
 import DropdownSelector from '@/Components/DropdownSelector.vue'
@@ -188,6 +247,7 @@ const selectedSong = ref(null)
 const selectedRanking = ref(rankingTypes[0])
 const response = ref(null)
 let musicid = ref(null)
+const isChangingSong = ref(false)
 
 async function loadMoreSongs() {
     if (isLoading.value || reachedEnd.value) return
@@ -227,8 +287,18 @@ const currentRankings = computed(() => {
 })
 
 const noSongSelected = computed(() => !selectedSong.value)
-function selectSong(song) {
-    selectedSong.value = song
+const selectSong = async (song) => {
+  if (selectedSong.value?.id === song.id) return
+  
+  isChangingSong.value = true
+  selectedSong.value = null // Forzamos un reset
+  
+  await nextTick() // Esperamos el siguiente ciclo de renderizado
+  selectedSong.value = song
+  
+  setTimeout(() => {
+    isChangingSong.value = false
+  }, 600)
 }
 function startGame(song) {
     musicid.value = song.id
@@ -398,16 +468,20 @@ console.log('Initial songs:', songsList.value)
          border border-purple-500/30;
 }
 
-/* Animación de entrada para los items */
-.song-item {
-  animation: slideIn 0.3s ease-out forwards;
-  opacity: 0;
-}
-
-@keyframes slideIn {
+/* Animaciones base */
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
   }
   to {
     opacity: 1;
@@ -415,40 +489,10 @@ console.log('Initial songs:', songsList.value)
   }
 }
 
-/* Delay para cada item */
-.song-item:nth-child(1) { animation-delay: 0.1s; }
-.song-item:nth-child(2) { animation-delay: 0.15s; }
-.song-item:nth-child(3) { animation-delay: 0.2s; }
-.song-item:nth-child(4) { animation-delay: 0.25s; }
-.song-item:nth-child(5) { animation-delay: 0.3s; }
-
-.ranking-item {
-  @apply bg-purple-900/20 rounded-lg p-4
-         border border-purple-900/30
-         transition-all duration-300;
-}
-
-.ranking-item:hover {
-  @apply bg-purple-900/30 border-purple-500/50
-         transform scale-[1.01]
-         shadow-[0_0_15px_rgba(168,85,247,0.2)];
-}
-
-.text-gradient {
-  @apply bg-clip-text text-transparent
-         bg-gradient-to-r from-pink-500 to-purple-500;
-}
-
-/* Animación suave al cargar */
-.ranking-item {
-  animation: fadeIn 0.5s ease-out forwards;
-  opacity: 0;
-}
-
-@keyframes fadeIn {
+@keyframes slideInDown {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(-20px);
   }
   to {
     opacity: 1;
@@ -456,33 +500,179 @@ console.log('Initial songs:', songsList.value)
   }
 }
 
-/* Aplicar delay a cada item */
-.ranking-item:nth-child(1) { animation-delay: 0.1s; }
-.ranking-item:nth-child(2) { animation-delay: 0.2s; }
-.ranking-item:nth-child(3) { animation-delay: 0.3s; }
-.ranking-item:nth-child(4) { animation-delay: 0.4s; }
-.ranking-item:nth-child(5) { animation-delay: 0.5s; }
-
-/* Añadir animaciones del spinner */
-@keyframes spin {
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* Añadir animación fadeIn */
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out forwards;
-}
-
-@keyframes fadeIn {
+@keyframes slideInUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Clases de animación */
+.animate-fadeIn {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slideInDown {
+  animation: slideInDown 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Animaciones para los items del ranking */
+.ranking-list-enter-active,
+.ranking-list-leave-active {
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ranking-list-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.ranking-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+/* Estilos del ranking item */
+.ranking-item {
+  @apply bg-gradient-to-r from-black/60 to-black/50 
+         backdrop-blur-md rounded-lg p-4
+         border border-purple-900/40
+         transition-all duration-300
+         relative;
+  animation: slideInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+.ranking-item:hover {
+  @apply border-purple-500/60
+         transform scale-[1.02] translate-x-1
+         bg-gradient-to-r from-purple-900/40 to-purple-800/30
+         shadow-[0_0_20px_rgba(168,85,247,0.15)];
+}
+
+/* Estilos específicos para los rankings top 3 */
+.ranking-item:nth-child(1) {
+  @apply bg-gradient-to-r from-yellow-900/40 to-black/50
+         border-yellow-500/40;
+  animation-delay: 0.1s;
+}
+
+.ranking-item:nth-child(1):hover {
+  @apply border-yellow-400/60
+         bg-gradient-to-r from-yellow-900/40 to-yellow-800/30
+         shadow-[0_0_25px_rgba(234,179,8,0.15)];
+}
+
+.ranking-item:nth-child(2) {
+  @apply bg-gradient-to-r from-gray-800/40 to-black/50
+         border-gray-400/40;
+  animation-delay: 0.2s;
+}
+
+.ranking-item:nth-child(2):hover {
+  @apply border-gray-300/60
+         bg-gradient-to-r from-gray-800/40 to-gray-700/30
+         shadow-[0_0_20px_rgba(156,163,175,0.15)];
+}
+
+.ranking-item:nth-child(3) {
+  @apply bg-gradient-to-r from-amber-900/40 to-black/50
+         border-amber-600/40;
+  animation-delay: 0.3s;
+}
+
+.ranking-item:nth-child(3):hover {
+  @apply border-amber-500/60
+         bg-gradient-to-r from-amber-900/40 to-amber-800/30
+         shadow-[0_0_20px_rgba(217,119,6,0.15)];
+}
+
+.ranking-item:nth-child(4) { animation-delay: 0.4s; }
+.ranking-item:nth-child(5) { animation-delay: 0.5s; }
+
+/* Efecto de brillo en hover */
+.ranking-item::after {
+  content: '';
+  @apply absolute inset-0 rounded-lg
+         bg-gradient-to-r from-purple-500/5 to-pink-500/5
+         opacity-0 transition-opacity duration-300;
+}
+
+.ranking-item:hover::after {
+  @apply opacity-100;
+}
+
+.play-button {
+  @apply bg-gradient-to-r from-pink-600 to-purple-600 
+         text-white px-6 py-3 rounded-lg
+         font-game flex items-center gap-2
+         hover:from-pink-500 hover:to-purple-500
+         transform transition-all duration-300
+         hover:scale-105 hover:shadow-[0_0_20px_rgba(236,72,153,0.3)]
+         border border-pink-500/30;
+}
+
+.ranking-selector {
+  @apply bg-black/40 backdrop-blur-sm rounded-lg 
+         border border-purple-500/30
+         relative z-50;
+}
+
+.ranking-scroll {
+  @apply pr-4 -mr-4 relative z-10;
+  scrollbar-width: thin;
+  scrollbar-color: theme('colors.purple.500') theme('colors.purple.900/30');
+}
+
+.ranking-scroll::-webkit-scrollbar {
+  @apply w-2;
+}
+
+.ranking-scroll::-webkit-scrollbar-track {
+  @apply bg-purple-900/30 rounded-full;
+}
+
+.ranking-scroll::-webkit-scrollbar-thumb {
+  @apply bg-purple-500/50 rounded-full hover:bg-purple-400/50;
+}
+
+.rank-number {
+  @apply border-2 rounded-full w-10 h-10 
+         flex items-center justify-center text-2xl font-bold font-game;
+}
+
+/* Animaciones para el cambio de mapa */
+.song-header {
+  animation: slideDown 0.5s ease-out forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
   }
   to {
     opacity: 1;

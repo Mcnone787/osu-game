@@ -33,7 +33,6 @@ class GameController extends Controller
         $songs = Map::with('user')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
-
         return Inertia::render('Game/Play', [
             'initialSongs' => [
                 'data' => $songs->through(function ($map) {
@@ -82,6 +81,9 @@ class GameController extends Controller
             'creator' => $map->user->name,
             'audio_path' => asset('storage/' . $map->audio_path),
             'rankings' => $this->getMockRankings(),
+            'image_path' => asset('storage/' . $map->image_path),
+            'thumbnail_path' => asset('storage/' . $map->thumbnail_path),
+            'video_path' => asset('storage/' . $map->video_path),
             'slug' => $map->slug
         ];
     }
