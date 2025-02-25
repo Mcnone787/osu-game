@@ -1,155 +1,173 @@
 <template>
-  <div class="game-container min-h-screen bg-black text-white">
-    <!-- Pantalla de inicio (z-index más alto) -->
-    <div v-if="!gameInitialized" 
-         class="fixed inset-0 bg-black/95 flex items-center justify-center z-[60]">
-      <div class="text-center space-y-6">
-        <h2 class="text-4xl font-game mb-4">{{ map.title }}</h2>
-        <p class="text-xl text-gray-400">{{ map.artist }}</p>
-        <div class="flex flex-col items-center gap-4 mt-8">
-          <div class="text-sm text-gray-400 mb-2">Controles</div>
-          <div class="flex gap-4">
-            <div class="w-12 h-12 bg-purple-900/30 rounded-lg border border-purple-500/30 
-                        flex items-center justify-center font-mono">D</div>
-            <div class="w-12 h-12 bg-purple-900/30 rounded-lg border border-purple-500/30 
-                        flex items-center justify-center font-mono">F</div>
-            <div class="w-12 h-12 bg-purple-900/30 rounded-lg border border-purple-500/30 
-                        flex items-center justify-center font-mono">J</div>
-            <div class="w-12 h-12 bg-purple-900/30 rounded-lg border border-purple-500/30 
-                        flex items-center justify-center font-mono">K</div>
-          </div>
-        </div>
-        <button @click="initializeGame" 
-                class="mt-8 bg-gradient-to-r from-pink-600/40 to-purple-600/40 
-                       hover:from-pink-500/60 hover:to-purple-500/60 
-                       text-white px-8 py-3 rounded-lg transition-all
-                       font-game text-xl border border-pink-500/30
-                       hover:scale-105 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]">
-          Presiona para comenzar
-        </button>
-      </div>
-    </div>
+  <div class="game-container min-h-screen bg-black text-white relative overflow-hidden" style="background:transparent;">
+    <!-- Video de fondo -->
+    <video v-if="map.video_path"
+           ref="videoBackground"
+           class="video-background"
+           loop
+           muted
+           playsinline
+           @loadeddata="onVideoLoaded"
+           @error="onVideoError">
+      <source :src="map.video_path" type="video/mp4">
+    </video>
+    
+    <!-- Overlay para el video -->
+    <div class="video-overlay"></div>
 
-    <!-- Overlay de cuenta regresiva (z-index más bajo) -->
-    <div v-if="showCountdown" 
-         class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
-      <div class="text-center">
-        <div class="text-8xl font-game text-white animate-pulse">
-          {{ countdown }}
-        </div>
-      </div>
-    </div>
-
-    <!-- HUD del juego -->
-    <div class="game-hud fixed top-0 left-0 right-0 p-4 flex justify-between items-center">
-      <!-- Info de la canción -->
-      <div class="flex items-center gap-4">
-        <button @click="exitGame" 
-                class="bg-purple-900/30 hover:bg-purple-900/50 
-                       text-white p-2 rounded-lg transition-all">
-          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </button>
-        <div>
-          <h2 class="text-xl font-game">{{ map.title }}</h2>
-          <p class="text-sm text-gray-400">{{ map.artist }}</p>
-        </div>
-      </div>
-
-      <!-- Puntuación -->
-      <div class="flex items-center gap-8">
-        <div class="text-right">
-          <div class="text-3xl font-mono font-bold">{{ score.toLocaleString() }}</div>
-          <div class="text-sm text-gray-400">Puntuación</div>
-        </div>
-        <div class="text-right">
-          <div class="text-3xl font-mono font-bold text-pink-400">x{{ combo }}</div>
-          <div class="text-sm text-gray-400">Combo</div>
-        </div>
-        <div class="text-right">
-          <div class="text-3xl font-mono font-bold text-purple-400">{{ accuracy.toFixed(2) }}%</div>
-          <div class="text-sm text-gray-400">Precisión</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Área de juego -->
-    <div class="game-area relative h-screen">
-      <!-- Feedback de hits en las posiciones de las flechas -->
-      <div class="hit-feedback-container fixed inset-0 pointer-events-none z-40">
-        <!-- Feedback izquierdo -->
-        <div class="feedback-left fixed left-[15%] bottom-[30%] w-[30%]">
-          <transition name="feedback">
-            <div v-if="leftFeedback" 
-                 :key="leftFeedback.id"
-                 class="feedback-text absolute"
-                 :class="leftFeedback.type">
-              {{ leftFeedback.text }}
+    <!-- Contenido del juego -->
+    <div class="relative z-10">
+      <!-- Pantalla de inicio (z-index más alto) -->
+      <div v-if="!gameInitialized" 
+           class="fixed inset-0 bg-black/95 flex items-center justify-center z-[60]">
+        <div class="text-center space-y-6">
+          <h2 class="text-4xl font-game mb-4">{{ map.title }}</h2>
+          <p class="text-xl text-gray-400">{{ map.artist }}</p>
+          <div class="flex flex-col items-center gap-4 mt-8">
+            <div class="text-sm text-gray-400 mb-2">Controles</div>
+            <div class="flex gap-4">
+              <div class="w-12 h-12 bg-purple-900/30 rounded-lg border border-purple-500/30 
+                          flex items-center justify-center font-mono">D</div>
+              <div class="w-12 h-12 bg-purple-900/30 rounded-lg border border-purple-500/30 
+                          flex items-center justify-center font-mono">F</div>
+              <div class="w-12 h-12 bg-purple-900/30 rounded-lg border border-purple-500/30 
+                          flex items-center justify-center font-mono">J</div>
+              <div class="w-12 h-12 bg-purple-900/30 rounded-lg border border-purple-500/30 
+                          flex items-center justify-center font-mono">K</div>
             </div>
-          </transition>
-        </div>
-
-        <!-- Feedback derecho -->
-        <div class="feedback-right fixed right-[15%] bottom-[30%] w-[30%]">
-          <transition name="feedback">
-            <div v-if="rightFeedback"
-                 :key="rightFeedback.id"
-                 class="feedback-text absolute"
-                 :class="rightFeedback.type">
-              {{ rightFeedback.text }}
-            </div>
-          </transition>
-        </div>
-      </div>
-
-      <!-- Línea de tiempo -->
-      <div class="timeline absolute bottom-32 left-0 right-0 h-1 bg-purple-500/30"></div>
-
-      <!-- Carriles de notas -->
-      <div class="note-lanes absolute bottom-32 left-1/2 -translate-x-1/2 
-                  flex gap-4 items-end">
-        <div v-for="lane in 4" :key="lane" 
-             class="note-lane w-16 h-[70vh] relative">
-          <!-- Receptor de notas -->
-          <div class="note-receptor absolute bottom-0 w-full h-16 
-                      bg-purple-500/20 rounded-lg border-2 border-purple-500/30
-                      transition-all"
-               :class="{ 'active': activeKeys[lane-1] }">
           </div>
-          
-          <!-- Notas -->
-          <div v-for="note in notes.filter(n => n.lane === lane-1 && !n.hit && !n.missed)" 
-               :key="note.timing"
-               class="absolute w-full h-16 bg-purple-500/40 rounded-lg border-2 
-                      border-purple-500/30 transition-transform"
-               :style="{ bottom: `${note.y}px` }">
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pantalla de resultados -->
-    <div v-if="gameEnded" 
-         class="fixed inset-0 bg-black/95 flex items-center justify-center z-50">
-      <div class="text-center">
-        <h2 class="text-4xl font-game mb-8">Resultados</h2>
-        <div class="space-y-4 mb-8">
-          <div class="text-6xl font-mono font-bold mb-2">{{ score.toLocaleString() }}</div>
-          <div class="text-xl text-pink-400">Combo Máximo: x{{ maxCombo }}</div>
-          <div class="text-xl text-purple-400">Precisión: {{ accuracy.toFixed(2) }}%</div>
-        </div>
-        <div class="flex justify-center gap-4">
-          <button @click="restartGame" 
-                  class="bg-purple-900/30 hover:bg-purple-900/50 
-                         text-white px-6 py-2 rounded-lg transition-all">
-            Reintentar
+          <button @click="initializeGame" 
+                  class="mt-8 bg-gradient-to-r from-pink-600/40 to-purple-600/40 
+                         hover:from-pink-500/60 hover:to-purple-500/60 
+                         text-white px-8 py-3 rounded-lg transition-all
+                         font-game text-xl border border-pink-500/30
+                         hover:scale-105 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]">
+            Presiona para comenzar
           </button>
+        </div>
+      </div>
+
+      <!-- Overlay de cuenta regresiva (z-index más bajo) -->
+      <div v-if="showCountdown" 
+           class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
+        <div class="text-center">
+          <div class="text-8xl font-game text-white animate-pulse">
+            {{ countdown }}
+          </div>
+        </div>
+      </div>
+
+      <!-- HUD del juego -->
+      <div class="game-hud fixed top-0 left-0 right-0 p-4 flex justify-between items-center">
+        <!-- Info de la canción -->
+        <div class="flex items-center gap-4">
           <button @click="exitGame" 
-                  class="bg-pink-900/30 hover:bg-pink-900/50 
-                         text-white px-6 py-2 rounded-lg transition-all">
-            Salir
+                  class="bg-purple-900/30 hover:bg-purple-900/50 
+                         text-white p-2 rounded-lg transition-all">
+            <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
           </button>
+          <div>
+            <h2 class="text-xl font-game">{{ map.title }}</h2>
+            <p class="text-sm text-gray-400">{{ map.artist }}</p>
+          </div>
+        </div>
+
+        <!-- Puntuación -->
+        <div class="flex items-center gap-8">
+          <div class="text-right">
+            <div class="text-3xl font-mono font-bold">{{ score.toLocaleString() }}</div>
+            <div class="text-sm text-gray-400">Puntuación</div>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-mono font-bold text-pink-400">x{{ combo }}</div>
+            <div class="text-sm text-gray-400">Combo</div>
+          </div>
+          <div class="text-right">
+            <div class="text-3xl font-mono font-bold text-purple-400">{{ accuracy.toFixed(2) }}%</div>
+            <div class="text-sm text-gray-400">Precisión</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Área de juego -->
+      <div class="game-area relative h-screen">
+        <!-- Feedback de hits en las posiciones de las flechas -->
+        <div class="hit-feedback-container fixed inset-0 pointer-events-none z-40">
+          <!-- Feedback izquierdo -->
+          <div class="feedback-left fixed left-[15%] bottom-[30%] w-[30%]">
+            <transition name="feedback">
+              <div v-if="leftFeedback" 
+                   :key="leftFeedback.id"
+                   class="feedback-text absolute"
+                   :class="leftFeedback.type">
+                {{ leftFeedback.text }}
+              </div>
+            </transition>
+          </div>
+
+          <!-- Feedback derecho -->
+          <div class="feedback-right fixed right-[15%] bottom-[30%] w-[30%]">
+            <transition name="feedback">
+              <div v-if="rightFeedback"
+                   :key="rightFeedback.id"
+                   class="feedback-text absolute"
+                   :class="rightFeedback.type">
+                {{ rightFeedback.text }}
+              </div>
+            </transition>
+          </div>
+        </div>
+
+        <!-- Línea de tiempo -->
+        <div class="timeline absolute bottom-32 left-0 right-0 h-1 bg-purple-500/30"></div>
+
+        <!-- Carriles de notas -->
+        <div class="note-lanes absolute bottom-32 left-1/2 -translate-x-1/2 
+                    flex gap-4 items-end">
+          <div v-for="lane in 4" :key="lane" 
+               class="note-lane w-16 h-[70vh] relative">
+            <!-- Receptor de notas -->
+            <div class="note-receptor absolute bottom-0 w-full h-16 
+                        bg-purple-500/20 rounded-lg border-2 border-purple-500/30
+                        transition-all"
+                 :class="{ 'active': activeKeys[lane-1] }">
+            </div>
+            
+            <!-- Notas -->
+            <div v-for="note in notes.filter(n => n.lane === lane-1 && !n.hit && !n.missed)" 
+                 :key="note.timing"
+                 class="absolute w-full h-16 bg-purple-500/40 rounded-lg border-2 
+                        border-purple-500/30 transition-transform"
+                 :style="{ bottom: `${note.y}px` }">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pantalla de resultados -->
+      <div v-if="gameEnded" 
+           class="fixed inset-0 bg-black/95 flex items-center justify-center z-50">
+        <div class="text-center">
+          <h2 class="text-4xl font-game mb-8">Resultados</h2>
+          <div class="space-y-4 mb-8">
+            <div class="text-6xl font-mono font-bold mb-2">{{ score.toLocaleString() }}</div>
+            <div class="text-xl text-pink-400">Combo Máximo: x{{ maxCombo }}</div>
+            <div class="text-xl text-purple-400">Precisión: {{ accuracy.toFixed(2) }}%</div>
+          </div>
+          <div class="flex justify-center gap-4">
+            <button @click="restartGame" 
+                    class="bg-purple-900/30 hover:bg-purple-900/50 
+                           text-white px-6 py-2 rounded-lg transition-all">
+              Reintentar
+            </button>
+            <button @click="exitGame" 
+                    class="bg-pink-900/30 hover:bg-pink-900/50 
+                           text-white px-6 py-2 rounded-lg transition-all">
+              Salir
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -157,7 +175,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 
 const props = defineProps({
@@ -166,6 +184,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const videoBackground = ref(null)
 
 // Estado del juego
 const showCountdown = ref(true)
@@ -179,7 +199,9 @@ const accuracy = ref(100)
 const activeKeys = ref([false, false, false, false])
 const keyPressTime = ref([0, 0, 0, 0]) // Nuevo: para controlar el tiempo entre pulsaciones
 const gameInitialized = ref(false)
-
+const imagePath = ref(null)
+const thumbnailPath = ref(null)
+const videoPath = ref(null)
 // Audio y notas
 const audioElement = ref(null)
 const notes = ref([])
@@ -420,34 +442,90 @@ const handleKeyUp = (event) => {
   }
 }
 
-// Iniciar el juego
+// Función para manejar el video de fondo
+const handleBackgroundVideo = async () => {
+  if (videoBackground.value && props.map.video_path) {
+    try {
+      await videoBackground.value.play()
+      videoBackground.value.volume = 0
+    } catch (error) {
+      console.error('Error al reproducir el video:', error)
+    }
+  }
+}
+
+// Funciones de debug para el video
+const onVideoLoaded = () => {
+  console.log('Video cargado:', {
+    duration: videoBackground.value?.duration,
+    videoPath: props.map.video_path,
+    readyState: videoBackground.value?.readyState
+  })
+}
+
+const onVideoError = (error) => {
+  console.error('Error en el video:', error)
+}
+
+// Función modificada para iniciar el juego
 function startGame() {
-  showCountdown.value = true;
-  countdown.value = 3;
+  showCountdown.value = true
+  countdown.value = 3
+  
+  console.log('Iniciando juego, video path:', props.map.video_path)
+  
+  // Asegurarse de que el video esté pausado inicialmente
+  if (videoBackground.value) {
+    console.log('Preparando video')
+    videoBackground.value.currentTime = 0
+    videoBackground.value.pause()
+  }
   
   const countdownInterval = setInterval(() => {
-    countdown.value--;
+    countdown.value--
+    console.log('Cuenta regresiva:', countdown.value)
+    
     if (countdown.value === 0) {
-      clearInterval(countdownInterval);
+      clearInterval(countdownInterval)
       setTimeout(() => {
-        showCountdown.value = false;
-        gameStarted.value = true;
-        initializeNotes();
+        showCountdown.value = false
+        gameStarted.value = true
         
-        // Retrasar el inicio del audio para dar tiempo a que aparezcan las notas
-        setTimeout(() => {
-          audioElement.value.play()
-            .then(() => {
-              console.log('Audio iniciado correctamente');
-              gameLoop.value = setInterval(updateNotes, 16);
-            })
-            .catch(error => {
-              console.error('Error al reproducir el audio:', error);
-            });
-        }, 500); // Pequeño retraso antes de iniciar el audio
-      }, 1000);
+        // Iniciar el video cuando termina la cuenta regresiva
+        if (videoBackground.value && props.map.video_path) {
+          console.log('Intentando reproducir video')
+          videoBackground.value.load() // Forzar recarga del video
+          const playPromise = videoBackground.value.play()
+          
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                videoBackground.value.volume = 0
+                console.log('Video reproduciendo correctamente')
+              })
+              .catch(error => {
+                console.error('Error al reproducir el video:', error)
+              })
+          }
+        } else {
+          console.log('No se encontró video o referencia:', {
+            video: videoBackground.value,
+            path: props.map.video_path
+          })
+        }
+        
+        // Iniciar el audio y el juego
+        audioElement.value.play()
+          .then(() => {
+            console.log('Audio iniciado correctamente')
+            gameLoop.value = setInterval(updateNotes, 16)
+          })
+          .catch(error => {
+            console.error('Error al reproducir el audio:', error)
+          })
+      }, 1000)
     }
-  }, 1000);
+  }, 1000)
 }
 
 // Terminar el juego
@@ -493,24 +571,29 @@ function restartGame() {
   startGame()
 }
 
-// Nueva función para inicializar el juego
+// Función para inicializar el juego
 function initializeGame() {
   gameInitialized.value = true
-  
-  // Crear y cargar el audio primero
   audioElement.value = new Audio(props.map.audio_path)
   audioElement.value.load() // Precarga el audio
-  
-  // Luego iniciar el juego
   startGame()
 }
 
 onMounted(() => {
+  console.log('Componente montado, verificando video:', {
+    ref: videoBackground.value,
+    path: props.map.video_path
+  })
+  handleBackgroundVideo()
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('keyup', handleKeyUp)
 })  
 
+// Detener el video cuando el componente se desmonta
 onUnmounted(() => {
+  if (videoBackground.value) {
+    videoBackground.value.pause()
+  }
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('keyup', handleKeyUp)
   if (audioElement.value) {
@@ -523,9 +606,51 @@ onUnmounted(() => {
   if (leftTimeoutId) clearTimeout(leftTimeoutId)
   if (rightTimeoutId) clearTimeout(rightTimeoutId)
 })
+
+// Observar cambios en el mapa para reiniciar el video si es necesario
+watch(() => props.map, async (newMap) => {
+  await nextTick()
+  handleBackgroundVideo()
+})
 </script>
 
 <style scoped>
+.game-container {
+  @apply relative min-h-screen;
+}
+
+/* Estilos mejorados para el video de fondo */
+.video-background {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  z-index: -2;
+  transform: translateX(0) translateY(0);
+  object-fit: cover;
+  opacity: 0.4;
+  transition: opacity 0.7s ease;
+}
+
+/* Overlay para mejorar la visibilidad del contenido */
+.video-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.7),
+    rgba(0, 0, 0, 0.5),
+    rgba(0, 0, 0, 0.7)
+  );
+  z-index: -1;
+}
+
 .game-container {
   background: linear-gradient(to bottom, #000000, #1a1a1a);
 }

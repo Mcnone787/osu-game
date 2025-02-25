@@ -64,6 +64,10 @@ class GameController extends Controller
                 'audio_path' => asset('storage/' . $maptoFind->audio_path),
                 'notes' => json_decode($maptoFind->notes, true) ?? [],
                 'creator' => $maptoFind->user->name,
+                'image_path' => asset('storage/' . $maptoFind->image_path),
+                'thumbnail_path' => asset('storage/' . $maptoFind->thumbnail_path),
+                'video_path' => asset('storage/' . $maptoFind->video_path),
+                'slug' => $maptoFind->slug
             ]
         ]);
     }
