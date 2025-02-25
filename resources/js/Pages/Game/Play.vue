@@ -12,10 +12,32 @@
     <div class="flex-1 grid grid-cols-12 h-[calc(100vh-5rem)]">
       <!-- Panel de Ranking (Izquierda) -->
       <div class="col-span-9 relative overflow-hidden z-[90]">
-        <!-- Fondo con efecto parallax -->
-        <div class="absolute inset-0 bg-cover bg-center bg-no-repeat blur-sm transform scale-105"
-             :style="{ backgroundImage: `url(${selectedSong?.image_path})` }">
+        <!-- Fondo con efecto parallax cuando hay imagen -->
+        <div v-if="selectedSong?.have_image" 
+             class="absolute inset-0 bg-cover bg-center bg-no-repeat blur-sm transform scale-105"
+             :style="{ backgroundImage: `url(${selectedSong.image_path})` }">
           <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"></div>
+        </div>
+
+        <!-- Fondo por defecto cuando hay canción seleccionada pero sin imagen -->
+        <div v-else-if="selectedSong" 
+             class="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-black/30">
+          <!-- Grid de SVGs de fondo (sin animación) -->
+      
+          <!-- Gradiente por encima de los SVGs -->
+          <div class="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-black/50 to-black/60"></div>
+        </div>
+
+        <!-- Fondo cuando no hay canción seleccionada (el que ya teníamos) -->
+        <div v-else class="absolute inset-0 bg-gradient-to-br from-purple-900/20 to-black/30">
+          <div class="absolute inset-0 flex items-center justify-center opacity-10">
+            <svg class="w-96 h-96 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" 
+                    stroke-linejoin="round" 
+                    stroke-width="1" 
+                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+            </svg>
+          </div>
         </div>
 
         <!-- Contenido del Ranking -->
@@ -23,15 +45,19 @@
           <!-- Estado sin canción seleccionada -->
           <div v-if="noSongSelected" 
                class="flex items-center justify-center h-full">
-            <div class="text-center space-y-4">
+            <div class="text-center space-y-4 relative z-10">
               <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-purple-500/20 
-                          flex items-center justify-center">
+                          flex items-center justify-center
+                          border-2 border-purple-500/30
+                          shadow-[0_0_15px_rgba(168,85,247,0.2)]">
                 <svg class="w-12 h-12 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  <path stroke-linecap="round" 
+                        stroke-linejoin="round" 
+                        stroke-width="2" 
                         d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                 </svg>
               </div>
-              <p class="text-2xl font-game mb-2">Selecciona una canción</p>
+              <p class="text-2xl font-game mb-2 text-white">Selecciona una canción</p>
               <p class="text-sm text-gray-400">para ver sus rankings</p>
             </div>
           </div>
@@ -39,12 +65,31 @@
           <!-- Contenido cuando hay canción seleccionada -->
           <div v-else class="h-full flex flex-col" :key="selectedSong.id">
             <!-- Cabecera de la canción con animación mejorada -->
-            <div class="song-header p-8 bg-black/30 backdrop-blur-sm">
+            <div class="song-header p-8 bg-black/30 backdrop-blur-sm"
+                 :class="{ 'has-image': selectedSong.have_image }">
               <div class="flex items-start gap-8 animate-fadeIn">
                 <!-- Imagen con animación -->
-                <div class="w-40 h-40 rounded-lg overflow-hidden border-2 border-purple-500/30 animate-scaleIn">
-                  <img :src="selectedSong.image_path" :alt="selectedSong.title" 
+                <div v-if="selectedSong.have_image" 
+                     class="w-40 h-40 rounded-lg overflow-hidden border-2 border-purple-500/30 animate-scaleIn">
+                  <img :src="selectedSong.image_path" 
+                       :alt="selectedSong.title" 
                        class="w-full h-full object-cover">
+                </div>
+                <!-- Placeholder cuando no hay imagen -->
+                <div v-else 
+                     class="w-40 h-40 rounded-lg overflow-hidden 
+                            border-2 border-purple-500/30 
+                            bg-purple-900/30 
+                            flex items-center justify-center">
+                  <svg class="w-20 h-20 text-purple-500/50 animate-float" 
+                       fill="none" 
+                       viewBox="0 0 24 24" 
+                       stroke="currentColor">
+                    <path stroke-linecap="round" 
+                          stroke-linejoin="round" 
+                          stroke-width="2" 
+                          d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
                 </div>
                 
                 <!-- Información con animación -->
@@ -151,7 +196,7 @@
               <template v-else>
                 <div class="w-full h-full bg-purple-900/30 
                             flex items-center justify-center">
-                  <svg class="w-12 h-12 text-purple-500/50" 
+                  <svg class="w-12 h-12 text-purple-500/50 animate-float" 
                        fill="none" 
                        viewBox="0 0 24 24" 
                        stroke="currentColor">
@@ -732,6 +777,135 @@ console.log('Initial songs:', songsList.value)
 
 .date-text {
   @apply text-gray-300;
+}
+
+/* Animación suave para el fondo */
+.bg-cover {
+  transition: background-image 0.3s ease-in-out;
+}
+
+/* Efecto de brillo para el icono circular */
+.rounded-full {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(168, 85, 247, 0.4);
+  }
+}
+
+
+
+/* Desfase de animación para cada icono */
+.grid svg:nth-child(3n+1) { animation-delay: 0s; }
+.grid svg:nth-child(3n+2) { animation-delay: 1s; }
+.grid svg:nth-child(3n+3) { animation-delay: 2s; }
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg);
+  }
+}
+
+/* Transición suave entre estados */
+.absolute {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Animación flotante solo para los SVG de mapas sin imagen */
+.animate-float {
+  animation: float 3s infinite ease-in-out;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(5deg);
+  }
+}
+
+/* Ajuste del background para la información del mapa */
+.song-header {
+  position: relative;
+}
+
+.song-header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  @apply bg-gradient-to-br from-purple-900/20 to-black/30;
+  opacity: 0.1;
+  z-index: -1;
+}
+
+/* Añadir imagen de fondo si existe */
+.song-header.has-image::before {
+  background-image: v-bind("selectedSong?.image_path ? `url(${selectedSong.image_path})` : ''");
+  background-size: cover;
+  background-position: center;
+}
+
+/* Transiciones suaves */
+.song-header, .song-thumbnail {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Animación para el icono principal */
+.animate-float {
+  animation: float 3s infinite ease-in-out;
+}
+
+/* Animación para los iconos de fondo */
+.animate-float-bg {
+  animation: floatBg 6s infinite ease-in-out;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(5deg);
+  }
+}
+
+@keyframes floatBg {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) rotate(5deg) scale(1.05);
+  }
+}
+
+/* Asegurar que las transiciones sean suaves */
+.absolute, .song-header {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Efecto de escala al entrar */
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 </style>
 
