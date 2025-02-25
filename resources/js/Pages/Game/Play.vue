@@ -112,11 +112,20 @@
                 
                 <!-- Botón de jugar -->
                 <button @click="startGame(selectedSong)" 
-                        class="play-button">
-                  Jugar
-                  <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        class="play-button group">
+                  <span class="relative z-10 font-game tracking-wider text-sm">JUGAR</span>
+                  <svg class="w-4 h-4 ml-1.5 relative z-10 group-hover:transform group-hover:translate-x-1 transition-all duration-300" 
+                       fill="none" 
+                       viewBox="0 0 24 24" 
+                       stroke="currentColor">
+                    <path stroke-linecap="round" 
+                          stroke-linejoin="round" 
+                          stroke-width="2" 
+                          d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path stroke-linecap="round" 
+                          stroke-linejoin="round" 
+                          stroke-width="2" 
+                          d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </button>
               </div>
@@ -697,13 +706,77 @@ console.log('Initial songs:', songsList.value)
 }
 
 .play-button {
-  @apply bg-gradient-to-r from-pink-600 to-purple-600 
-         text-white px-6 py-3 rounded-lg
-         font-game flex items-center gap-2
-         hover:from-pink-500 hover:to-purple-500
-         transform transition-all duration-300
-         hover:scale-105 hover:shadow-[0_0_20px_rgba(236,72,153,0.3)]
-         border border-pink-500/30;
+  @apply flex items-center justify-center gap-1.5 
+         px-5 py-2
+         font-bold text-sm text-white
+         relative overflow-hidden
+         transition-all duration-300
+         rounded-lg
+         border border-pink-500/30
+         hover:border-pink-400/50
+         hover:scale-[1.02]
+         active:scale-95
+         shadow-[0_0_10px_rgba(236,72,153,0.1)];
+  background: linear-gradient(
+    165deg, 
+    rgba(236,72,153,0.9) 0%,
+    rgba(168,85,247,0.9) 100%
+  );
+}
+
+/* Efecto de brillo */
+.play-button::before {
+  content: '';
+  @apply absolute inset-0 
+         opacity-0
+         transition-all duration-500;
+  background: linear-gradient(
+    165deg,
+    rgba(236,72,153,1) 0%,
+    rgba(168,85,247,1) 100%
+  );
+}
+
+.play-button:hover::before {
+  @apply opacity-100;
+}
+
+/* Efecto de resplandor */
+.play-button::after {
+  content: '';
+  @apply absolute -inset-0.5
+         bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500
+         opacity-0
+         blur-md
+         transition-all duration-500;
+}
+
+.play-button:hover::after {
+  @apply opacity-30;
+}
+
+.play-button:hover {
+  @apply shadow-[0_0_15px_rgba(236,72,153,0.2)];
+}
+
+/* Animación de pulso suave */
+@keyframes softPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(236,72,153,0.1);
+  }
+  50% {
+    transform: scale(1.01);
+    box-shadow: 0 0 12px rgba(236,72,153,0.15);
+  }
+}
+
+.play-button {
+  animation: softPulse 2s infinite ease-in-out;
+}
+
+.play-button:hover {
+  animation: none;
 }
 
 .ranking-selector {
@@ -797,8 +870,6 @@ console.log('Initial songs:', songsList.value)
     box-shadow: 0 0 25px rgba(168, 85, 247, 0.4);
   }
 }
-
-
 
 /* Desfase de animación para cada icono */
 .grid svg:nth-child(3n+1) { animation-delay: 0s; }
