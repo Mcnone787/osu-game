@@ -432,10 +432,13 @@ onUnmounted(() => {
 
 const getDifficultyClass = (difficulty) => {
     const classes = {
-        'FACIL': 'bg-green-500/20 text-green-400 border-green-500/30',
+        'FACIL': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+        'EASY': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
         'NORMAL': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
         'DIFICIL': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-        'EXPERTO': 'bg-red-500/20 text-red-400 border-red-500/30'
+        'HARD': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+        'EXPERTO': 'bg-red-500/20 text-red-400 border-red-500/30',
+        'EXPERT': 'bg-red-500/20 text-red-400 border-red-500/30'
     }
     return classes[difficulty] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
 }
@@ -551,8 +554,8 @@ const formatDuration = (seconds) => {
 }
 
 /* Efectos hover para cada dificultad */
-.difficulty-badge.bg-green-500\/20:hover {
-  @apply bg-green-500/30 border-green-500/50;
+.difficulty-badge.bg-emerald-500\/20:hover {
+  @apply bg-emerald-500/30 border-emerald-500/50;
 }
 
 .difficulty-badge.bg-blue-500\/20:hover {
