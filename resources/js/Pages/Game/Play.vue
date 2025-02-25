@@ -112,7 +112,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      {{ formatDuration(selectedSong) }}
+                      {{ formatDuration(selectedSong.duration) }}
                     </span>
                   </div>
                 </div>
@@ -432,11 +432,12 @@ onUnmounted(() => {
 
 const getDifficultyClass = (difficulty) => {
     const classes = {
-        'RAIN': 'bg-blue-500',
-        'HARD': 'bg-pink-500',
-        'INSANE': 'bg-purple-500'
+        'FACIL': 'bg-green-500/20 text-green-400 border-green-500/30',
+        'NORMAL': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+        'DIFICIL': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+        'EXPERTO': 'bg-red-500/20 text-red-400 border-red-500/30'
     }
-    return classes[difficulty] || 'bg-gray-500'
+    return classes[difficulty] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
 }
 
 const getRankClass = (position) => {
@@ -540,6 +541,7 @@ const formatDuration = (seconds) => {
 .difficulty-badge {
   @apply px-3 py-1 rounded-full text-xs font-bold
          transition-all duration-300
+         border
          flex items-center gap-1;
 }
 
@@ -548,20 +550,21 @@ const formatDuration = (seconds) => {
   @apply text-xs;
 }
 
-/* Clases para las dificultades */
-.difficulty-badge.bg-blue-500 {
-  @apply bg-blue-500/20 text-blue-400
-         border border-blue-500/30;
+/* Efectos hover para cada dificultad */
+.difficulty-badge.bg-green-500\/20:hover {
+  @apply bg-green-500/30 border-green-500/50;
 }
 
-.difficulty-badge.bg-pink-500 {
-  @apply bg-pink-500/20 text-pink-400
-         border border-pink-500/30;
+.difficulty-badge.bg-blue-500\/20:hover {
+  @apply bg-blue-500/30 border-blue-500/50;
 }
 
-.difficulty-badge.bg-purple-500 {
-  @apply bg-purple-500/20 text-purple-400
-         border border-purple-500/30;
+.difficulty-badge.bg-orange-500\/20:hover {
+  @apply bg-orange-500/30 border-orange-500/50;
+}
+
+.difficulty-badge.bg-red-500\/20:hover {
+  @apply bg-red-500/30 border-red-500/50;
 }
 
 /* Animaciones base */
