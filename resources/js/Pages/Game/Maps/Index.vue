@@ -84,6 +84,7 @@
                     >
                       Ver Detalles
                     </Link>
+                    <template v-if="map.user_id === $page.props.auth.user.id">
                       <Link 
                         :href="route('maps.edit', map)"
                         class="map-action-button text-blue-400 hover:text-blue-300 
@@ -98,6 +99,7 @@
                       >
                         Eliminar
                       </button>
+                    </template>
                   </div>
                 </div>
               </div>
