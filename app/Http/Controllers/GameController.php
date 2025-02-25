@@ -18,14 +18,21 @@ class GameController extends Controller
         if ($request->wantsJson()) {
             $songs = Map::with('user')
                 ->orderBy('created_at', 'desc')
-                ->paginate(5);
+                ->paginate(10);
+
+            // Debug log
+            \Log::info('Pagination info:', [
+                'current_page' => $songs->currentPage(),
+                'total' => $songs->total(),
+                'has_more' => $songs->hasMorePages()
+            ]);
 
             return response()->json([
                 'data' => $songs->through(function ($map) {
                     return $this->transformMap($map);
-                }),
-                'next_page_url' => $songs->nextPageUrl(),
-                'has_more' => $songs->hasMorePages()
+                })->values(),
+                'has_more' => $songs->hasMorePages(),
+                'current_page' => $songs->currentPage()
             ]);
         }
 
@@ -38,8 +45,8 @@ class GameController extends Controller
                 'data' => $songs->through(function ($map) {
                     return $this->transformMap($map);
                 })->values(),
-                'next_page_url' => $songs->nextPageUrl(),
-                'has_more' => $songs->hasMorePages()
+                'has_more' => $songs->hasMorePages(),
+                'current_page' => $songs->currentPage()
             ],
             'currentUser' => auth()->user() ? [
                 'name' => auth()->user()->name,
@@ -86,6 +93,7 @@ class GameController extends Controller
             'audio_path' => asset('storage/' . $map->audio_path),
             'rankings' => $this->getMockRankings(),
             'image_path' => asset('storage/' . $map->image_path),
+            'have_image' => $map->image_path,
             'thumbnail_path' => asset('storage/' . $map->thumbnail_path),
             'video_path' => asset('storage/' . $map->video_path),
             'slug' => $map->slug

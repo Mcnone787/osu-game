@@ -143,14 +143,24 @@
                :class="{'active': selectedSong?.id === song.id}">
             <!-- Imagen de la canción -->
             <div class="song-thumbnail">
-              <template v-if="song.image_path">
-                <img :src="song.image_path" alt="" class="w-24 h-24 object-cover">
+              <template v-if="song.have_image">
+                <img :src="song.image_path" 
+                     :alt="song.title" 
+                     class="w-full h-full object-cover">
               </template>
               <template v-else>
-                <svg class="w-12 h-12 text-purple-500/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                </svg>
+                <div class="w-full h-full bg-purple-900/30 
+                            flex items-center justify-center">
+                  <svg class="w-12 h-12 text-purple-500/50" 
+                       fill="none" 
+                       viewBox="0 0 24 24" 
+                       stroke="currentColor">
+                    <path stroke-linecap="round" 
+                          stroke-linejoin="round" 
+                          stroke-width="2" 
+                          d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  </svg>
+                </div>
               </template>
               <div class="song-duration text-white">{{ song.length }}</div>
             </div>
@@ -262,25 +272,28 @@ async function loadMoreSongs() {
 
     try {
         isLoading.value = true
-        const nextPage = currentPage.value + 1
+        currentPage.value++
 
-        const result = await axios.get(route('game.play'), {
-            params: { page: nextPage }
+        const response = await axios.get(route('game.play'), {
+            params: {
+                page: currentPage.value
+            }
         })
 
-        response.value = result.data
+        const newSongs = response.data.data
+        
+        // Debug logs
+        console.log('Nueva página cargada:', currentPage.value)
+        console.log('Nuevas canciones:', newSongs)
+        console.log('Has more:', response.data.has_more)
 
-        if (!result.data.has_more) {
-            reachedEnd.value = true
+        if (newSongs.length > 0) {
+            songsList.value = [...songsList.value, ...newSongs]
         }
 
-        if (result.data.data && result.data.data.length > 0) {
-            songsList.value = [...songsList.value, ...result.data.data]
-            currentPage.value = nextPage
-        } else {
-            reachedEnd.value = true
-        }
-
+        // Solo establecer reachedEnd si realmente no hay más páginas
+        reachedEnd.value = !response.data.has_more
+        
     } catch (error) {
         console.error('Error cargando más canciones:', error)
     } finally {
@@ -322,29 +335,29 @@ function handleScroll(e) {
         const scrollPosition = element.scrollTop + element.clientHeight
         const scrollHeight = element.scrollHeight
         
-        if (scrollPosition >= scrollHeight - 100 && !isLoading.value && !reachedEnd.value) {
+        // Debug logs
+        console.log('Scroll position:', scrollPosition)
+        console.log('Scroll height:', scrollHeight)
+        console.log('Is loading:', isLoading.value)
+        console.log('Reached end:', reachedEnd.value)
+        console.log('Current page:', currentPage.value)
+        
+        // Reducimos el umbral y verificamos que realmente podemos cargar más
+        if (scrollPosition >= scrollHeight - 300 && !isLoading.value && !reachedEnd.value) {
             loadMoreSongs()
         }
     }, 100)
 }
 
-onMounted(async () => {
+onMounted(() => {
+    // Inicializar con los valores correctos del backend
+    currentPage.value = props.initialSongs.current_page || 1
+    reachedEnd.value = !props.initialSongs.has_more
+
+    // Añadir el evento de scroll al elemento correcto
     const songListElement = document.querySelector('.song-list')
     if (songListElement) {
         songListElement.addEventListener('scroll', handleScroll)
-    }
-    
-    // Hacer una petición inicial para verificar si hay más páginas
-    try {
-        const result = await axios.get(route('game.play'), {
-            params: { page: 1 }
-        })
-        response.value = result.data
-        if (!result.data.has_more) {
-            reachedEnd.value = true
-        }
-    } catch (error) {
-        console.error('Error en la verificación inicial:', error)
     }
 })
 
@@ -429,13 +442,18 @@ console.log('Initial songs:', songsList.value)
 }
 
 .song-thumbnail {
-  @apply relative rounded-lg overflow-hidden
+  @apply relative w-24 h-24 rounded-lg overflow-hidden
          border-2 border-purple-900/50
-         transition-all duration-300;
+         transition-all duration-300
+         bg-gradient-to-br from-purple-900/30 to-black/30;
 }
 
 .song-item:hover .song-thumbnail {
   @apply border-pink-500/50;
+}
+
+.song-item.active .song-thumbnail {
+  @apply border-pink-500/50 shadow-[0_0_15px_rgba(236,72,153,0.2)];
 }
 
 .song-duration {
