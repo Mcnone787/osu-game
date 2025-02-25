@@ -66,8 +66,13 @@ class MapController extends Controller
             $image = $request->file('image');
             $video = $request->file('video');
             $this->validateFilesExtension($file, ['mp3', 'wav', 'ogg']);
-            $this->validateFilesExtension($image, ['jpeg', 'png', 'jpg', 'gif', 'svg']);
-            $this->validateFilesExtension($video, ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm']);
+            if($image){
+                $this->validateFilesExtension($image, ['jpeg', 'png', 'jpg', 'gif', 'svg']);
+            }
+            if($video){
+
+                $this->validateFilesExtension($video, ['mp4', 'mov', 'avi', 'wmv', 'flv', 'webm']);
+            }
 
 
             // Verificar que el archivo es válido
@@ -77,16 +82,28 @@ class MapController extends Controller
 
            
             $extension = $file->getClientOriginalExtension();
-            $imageExtension = $image->getClientOriginalExtension();
-            $videoExtension = $video->getClientOriginalExtension();
+            if($image){
+                $imageExtension = $image->getClientOriginalExtension();
+            }
+            if($video){
+                $videoExtension = $video->getClientOriginalExtension();
+            }
             // Generar nombre único para el archivo
             $fileName = time() . '_' . \Str::random(10) . '.' . $extension;
-            $imageName = time() . '_' . \Str::random(10) . '.' . $imageExtension;
-            $videoName = time() . '_' . \Str::random(10) . '.' . $videoExtension;
+            if($image){
+                $imageName = time() . '_' . \Str::random(10) . '.' . $imageExtension;
+            }
+            if($video){
+                $videoName = time() . '_' . \Str::random(10) . '.' . $videoExtension;
+            }
             // Intentar guardar el archivo
             $audioPath = $file->storeAs('maps/audio', $fileName, 'public');
-            $imagePath = $image->storeAs('maps/image', $imageName, 'public');
-            $videoPath = $video->storeAs('maps/video', $videoName, 'public');
+            if($image){
+                $imagePath = $image->storeAs('maps/image', $imageName, 'public');
+            }
+            if($video){
+                $videoPath = $video->storeAs('maps/video', $videoName, 'public');
+            }
             $thumbnailPath = $image->storeAs('maps/thumbnails', $imageName, 'public');
             if (!$audioPath) {
                 throw new \Exception('Error al guardar el archivo de audio');
