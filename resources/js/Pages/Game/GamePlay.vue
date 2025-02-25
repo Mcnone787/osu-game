@@ -95,7 +95,7 @@
       <!-- Feedback de hits en las posiciones de las flechas -->
       <div class="hit-feedback-container fixed inset-0 pointer-events-none z-40">
         <!-- Feedback izquierdo -->
-        <div class="feedback-left fixed left-[15%] bottom-[30%] w-[30%]">
+        <div class="feedback-left fixed left-[25%] bottom-[30%] w-[30%]">
           <transition name="feedback">
             <div v-if="leftFeedback" 
                  :key="leftFeedback.id"
@@ -107,7 +107,7 @@
         </div>
 
         <!-- Feedback derecho -->
-        <div class="feedback-right fixed right-[15%] bottom-[30%] w-[30%]">
+        <div class="feedback-right fixed right-[25%] bottom-[30%] w-[30%]">
           <transition name="feedback">
             <div v-if="rightFeedback"
                  :key="rightFeedback.id"
@@ -120,25 +120,32 @@
       </div>
 
       <!-- Línea de tiempo -->
-      <div class="timeline absolute bottom-32 left-0 right-0 h-1 bg-purple-500/30"></div>
+      <div class="timeline absolute bottom-20 left-0 right-0 h-1 bg-purple-500/30"></div>
 
-      <!-- Carriles de notas -->
-      <div class="note-lanes absolute bottom-32 left-1/2 -translate-x-1/2 
-                  flex gap-4 items-end">
+      <!-- Carriles de notas (bajados un poco más) -->
+      <div class="note-lanes absolute bottom-20 left-[5%] flex gap-1 items-end">
         <div v-for="lane in 4" :key="lane" 
-             class="note-lane w-16 h-[70vh] relative">
+             class="note-lane w-20 relative" 
+             style="height: calc(100vh + 5rem)">
+          <!-- Fondo del carril con gradiente -->
+          <div class="lane-background absolute inset-0"></div>
+          
           <!-- Receptor de notas -->
           <div class="note-receptor absolute bottom-0 w-full h-16 
                       bg-purple-500/20 rounded-lg border-2 border-purple-500/30
-                      transition-all"
+                      transition-all z-10"
                :class="{ 'active': activeKeys[lane-1] }">
+            <span class="key-hint absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 
+                         text-white/50 text-base font-bold">
+              {{ ['D', 'F', 'J', 'K'][lane-1] }}
+            </span>
           </div>
           
           <!-- Notas -->
           <div v-for="note in notes.filter(n => n.lane === lane-1 && !n.hit && !n.missed)" 
                :key="note.timing"
                class="absolute w-full h-16 bg-purple-500/40 rounded-lg border-2 
-                      border-purple-500/30 transition-transform"
+                      border-purple-500/30 transition-transform z-20"
                :style="{ bottom: `${note.y}px` }">
           </div>
         </div>
@@ -609,142 +616,179 @@ watch(() => props.map, async (newMap) => {
 
 <style scoped>
 .game-container {
-  @apply relative min-h-screen;
+  @apply relative min-h-screen overflow-hidden;
 }
 
-/* Estilos mejorados para el video de fondo */
 .video-background {
-  position: fixed;
-  right: 0;
-  bottom: 0;
-  min-width: 100%;
-  min-height: 100%;
-  width: auto;
-  height: auto;
-  z-index: -2;
-  transform: translateX(0) translateY(0);
-  object-fit: cover;
-  opacity: 0.4;
-  transition: opacity 0.7s ease;
+  @apply fixed right-0 bottom-0 min-w-full min-h-full w-auto h-auto z-[-2]
+         object-cover opacity-40 transition-opacity duration-700;
 }
 
-/* Overlay para mejorar la visibilidad del contenido */
 .video-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.7),
-    rgba(0, 0, 0, 0.5),
-    rgba(0, 0, 0, 0.7)
-  );
-  z-index: -1;
+  @apply fixed inset-0 bg-gradient-to-r from-black/80 via-black/60 to-black/80 z-[-1];
+}
+
+.game-area {
+  @apply flex h-screen;
+}
+
+.gameplay-lanes {
+  @apply w-1/3 relative flex;
+  margin-left: 5%;
+}
+
+.lanes-container {
+  @apply flex w-full h-full relative;
+}
+
+.lane {
+  @apply flex-1 relative mx-1;
+}
+
+.lane-background {
+  @apply bg-gradient-to-b from-purple-900/20 via-purple-900/10 to-transparent
+         border-l border-r border-purple-500/20;
+  mask-image: linear-gradient(to top, black 90%, transparent);
+}
+
+.note-receptor {
+  @apply shadow-lg backdrop-blur-sm;
 }
 
 .note-receptor.active {
-  @apply bg-purple-500/40 border-purple-500/60
-         scale-105 shadow-[0_0_15px_rgba(168,85,247,0.3)];
+  @apply bg-purple-500/40 
+         border-purple-500/60 
+         scale-105 
+         shadow-[0_0_15px_rgba(168,85,247,0.3)];
 }
 
-/* Animación de pulso para la cuenta regresiva */
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(0.95);
-  }
+.key-hint {
+  @apply opacity-70 transition-all duration-200;
 }
 
-.animate-pulse {
-  animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.note-receptor.active .key-hint {
+  @apply opacity-100 scale-110;
 }
 
-/* Estilos para el feedback */
+.note {
+  @apply bg-gradient-to-b from-purple-500/40 to-pink-500/40
+         backdrop-blur-sm;
+}
+
+/* Asegurar que las notas estén por encima del fondo del carril */
+.note-receptor, 
+.note {
+  @apply rounded-lg shadow-md z-10;
+}
+
+.feedback-area {
+  @apply absolute right-[-150%] w-64 h-full
+         pointer-events-none;
+}
+
+.feedback-container {
+  @apply absolute h-full flex flex-col items-start justify-center;
+}
+
+.feedback-container.left {
+  @apply left-0;
+}
+
+.feedback-container.right {
+  @apply right-0;
+}
+
 .feedback-text {
-  font-family: 'game';
-  font-weight: bold;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
-  white-space: nowrap;
-  position: absolute;
-  transform: translateY(-50%);
-  /* Forzar nueva capa para mejor rendimiento */
-  will-change: transform, opacity;
-  backface-visibility: hidden;
-}
-
-.feedback-left .feedback-text {
-  left: 0;
-  text-align: left;
-}
-
-.feedback-right .feedback-text {
-  right: 0;
-  text-align: right;
+  @apply font-bold text-shadow-glow whitespace-nowrap
+         transform transition-all duration-100;
 }
 
 .perfect {
-  @apply text-purple-400;
-  font-size: 2.5rem;
+  @apply text-4xl text-purple-400;
 }
 
 .good {
-  @apply text-pink-400;
-  font-size: 2rem;
+  @apply text-3xl text-pink-400;
 }
 
 .miss {
-  @apply text-red-500;
-  font-size: 1.5rem;
+  @apply text-2xl text-red-500;
 }
 
-/* Animaciones más rápidas */
-.feedback-enter-active {
-  animation: feedback-in 0.1s ease-out;
+.game-info {
+  @apply fixed top-8 right-8 text-right;
 }
 
+.score {
+  @apply text-6xl font-bold text-white/90
+         text-shadow-glow mb-2;
+}
+
+.combo {
+  @apply text-3xl font-bold text-purple-400
+         text-shadow-glow;
+}
+
+/* Utilidad para el brillo del texto */
+.text-shadow-glow {
+  text-shadow: 0 0 10px currentColor;
+}
+
+/* Animaciones de feedback */
+.feedback-enter-active,
 .feedback-leave-active {
-  animation: feedback-out 0.1s ease-in;
+  @apply transition-all duration-100;
 }
 
-@keyframes feedback-in {
-  0% {
-    opacity: 0;
-    transform: translateY(-50%) translateX(-10px) scale(0.8);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0) scale(1);
-  }
+.feedback-enter-from,
+.feedback-leave-to {
+  @apply opacity-0 scale-75;
 }
 
-@keyframes feedback-out {
-  0% {
-    opacity: 1;
-    transform: translateY(-50%) translateX(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-50%) translateX(10px) scale(0.8);
-  }
+/* Animación de brillo para hits perfectos */
+@keyframes perfect-glow {
+  0%, 100% { filter: drop-shadow(0 0 5px currentColor); }
+  50% { filter: drop-shadow(0 0 15px currentColor); }
 }
 
-/* Efecto de brillo */
-.perfect, .good {
-  animation: glow 0.5s ease-in-out;
+.perfect {
+  animation: perfect-glow 0.5s ease-in-out;
 }
 
-@keyframes glow {
-  0%, 100% {
-    filter: drop-shadow(0 0 5px currentColor);
-  }
-  50% {
-    filter: drop-shadow(0 0 15px currentColor);
-  }
+.note-lanes {
+  transform: translateX(0);
+}
+
+.note-lane {
+  position: relative;
+  transform-origin: bottom;
+}
+
+.note-lane::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(168, 85, 247, 0.1), transparent);
+  border-left: 1px solid rgba(168, 85, 247, 0.2);
+  border-right: 1px solid rgba(168, 85, 247, 0.2);
+  pointer-events: none;
+}
+
+.key-hint {
+  @apply opacity-70 transition-all duration-200;
+}
+
+.note-receptor.active .key-hint {
+  @apply opacity-100 scale-110;
+}
+
+/* Ajustar el tamaño de las notas para que coincidan con los carriles más anchos */
+.note-receptor, 
+.note {
+  @apply rounded-lg shadow-md;
+}
+
+.note {
+  @apply bg-gradient-to-b from-purple-500/40 to-pink-500/40;
 }
 </style> 
