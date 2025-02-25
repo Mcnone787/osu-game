@@ -29,7 +29,7 @@ class MapController extends Controller
         return Inertia::render('Game/Maps/Index', [
             'initialMaps' => Map::with('user')
                 ->orderBy('created_at', 'desc')
-                ->paginate(5)
+                ->paginate(10)
                 ->items()
         ]);
     }

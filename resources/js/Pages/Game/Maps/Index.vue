@@ -59,8 +59,8 @@
                       </svg>
                       {{ map.bpm }} BPM
                     </span>
-                    <span class="difficulty-badge" :class="getDifficultyClass(map.difficulty)">
-                      {{ map.difficulty }}
+                    <span class="difficulty-badge" :class="getDifficultyClass(map.difficulty.toUpperCase())">
+                      {{ map.difficulty.toUpperCase() }}
                     </span>
                   </div>
                 </div>
@@ -174,12 +174,15 @@
   
   function getDifficultyClass(difficulty) {
     const classes = {
-      'EASY': 'bg-green-500/20 text-green-400 border-green-500/30',
+      'FACIL': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+      'EASY': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
       'NORMAL': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-      'HARD': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
-      'INSANE': 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+      'DIFICIL': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+      'HARD': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+      'EXPERTO': 'bg-red-500/20 text-red-400 border-red-500/30',
+      'EXPERT': 'bg-red-500/20 text-red-400 border-red-500/30'
     }
-    return classes[difficulty] || 'bg-gray-500/20'
+    return classes[difficulty] || 'bg-gray-500/20 text-gray-400 border-gray-500/30';
   }
   
   function deleteMap(map) {
@@ -290,6 +293,69 @@
   .difficulty-badge::before {
     content: '●';
     @apply text-xs;
+  }
+  
+  /* Estilos base para cada dificultad */
+  .difficulty-easy {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: rgb(52, 211, 153);
+    border-color: rgba(16, 185, 129, 0.3);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
+  }
+  
+  .difficulty-normal {
+    background-color: rgba(59, 130, 246, 0.2);
+    color: rgb(96, 165, 250);
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+  }
+  
+  .difficulty-hard {
+    background-color: rgba(249, 115, 22, 0.2);
+    color: rgb(251, 146, 60);
+    border-color: rgba(249, 115, 22, 0.3);
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.1);
+  }
+  
+  .difficulty-expert {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: rgb(248, 113, 113);
+    border-color: rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+  }
+  
+  /* Efectos hover */
+  .difficulty-easy:hover {
+    background-color: rgba(16, 185, 129, 0.3);
+    border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+    transform: scale(1.05);
+  }
+  
+  .difficulty-normal:hover {
+    background-color: rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+    transform: scale(1.05);
+  }
+  
+  .difficulty-hard:hover {
+    background-color: rgba(249, 115, 22, 0.3);
+    border-color: rgba(249, 115, 22, 0.5);
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);
+    transform: scale(1.05);
+  }
+  
+  .difficulty-expert:hover {
+    background-color: rgba(239, 68, 68, 0.3);
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+    transform: scale(1.05);
+  }
+  
+  /* Transiciones */
+  .difficulty-badge {
+    transition: all 0.3s ease-in-out;
   }
   
   .map-action-button {
