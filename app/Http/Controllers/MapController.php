@@ -143,9 +143,7 @@ class MapController extends Controller
     public function edit(Map $map)
     {
         // Verificar que el usuario es el propietario del mapa
-        if ($map->user_id !== auth()->id()) {
-            abort(403, 'No tienes permiso para editar este mapa');
-        }
+       
 
         return Inertia::render('Game/Maps/Create', [
             'isEditing' => true,
@@ -156,9 +154,7 @@ class MapController extends Controller
     public function update(Request $request, Map $map)
     {
         // Verificar que el usuario es el propietario del mapa
-        if ($map->user_id !== auth()->id()) {
-            abort(403, 'No tienes permiso para editar este mapa');
-        }
+       
 
         try {
             // Validación
