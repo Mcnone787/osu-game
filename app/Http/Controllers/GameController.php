@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Map;
+use getID3; // Añadido el import de getID3
 
 class GameController extends Controller
 {
@@ -81,6 +82,20 @@ class GameController extends Controller
 
     private function transformMap($map)
     {
+        // Obtener la duración del archivo de audio
+        $duration = 0;
+        $audioPath = storage_path('app/public/' . $map->audio_path);
+        
+        if (file_exists($audioPath)) {
+            try {
+                $getID3 = new \getID3();
+                $fileInfo = $getID3->analyze($audioPath);
+                $duration = isset($fileInfo['playtime_seconds']) ? $fileInfo['playtime_seconds'] : 0;
+            } catch (\Exception $e) {
+                \Log::error('Error al obtener duración del audio: ' . $e->getMessage());
+            }
+        }
+
         return [
             'id' => $map->id,
             'title' => $map->title,
@@ -88,7 +103,8 @@ class GameController extends Controller
             'difficulty' => strtoupper($map->difficulty),
             'bpm' => $map->bpm,
             'thumbnail' => asset('imgs/default-song.jpg'),
-            'length' => '00:00',
+            'length' => $this->formatDuration($duration), // Formato mm:ss
+            'duration' => $duration, // Duración en segundos
             'creator' => $map->user->name,
             'audio_path' => asset('storage/' . $map->audio_path),
             'rankings' => $this->getMockRankings(),
@@ -98,6 +114,13 @@ class GameController extends Controller
             'video_path' => asset('storage/' . $map->video_path),
             'slug' => $map->slug
         ];
+    }
+
+    private function formatDuration($seconds)
+    {
+        $minutes = floor($seconds / 60);
+        $remainingSeconds = floor($seconds % 60);
+        return sprintf('%d:%02d', $minutes, $remainingSeconds);
     }
 
     private function getMockRankings()
@@ -123,5 +146,17 @@ class GameController extends Controller
                 // ... rankings por país
             ]
         ];
+    }
+
+    private function getAudioDuration($audioPath)
+    {
+        try {
+            $command = "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 " . escapeshellarg($audioPath);
+            $duration = trim(shell_exec($command));
+            return $duration ? floatval($duration) : 0;
+        } catch (\Exception $e) {
+            \Log::error('Error al obtener duración del audio: ' . $e->getMessage());
+            return 0;
+        }
     }
 }
