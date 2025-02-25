@@ -22,7 +22,7 @@
                 bg-gradient-to-b from-black/80 to-black/70
                 rounded-lg border border-purple-500/30
                 shadow-lg shadow-purple-500/10 backdrop-blur-md
-                overflow-hidden z-50">
+                overflow-hidden z-[9999]">
       <div v-for="option in options" 
            :key="option.id"
            @click="selectOption(option)"

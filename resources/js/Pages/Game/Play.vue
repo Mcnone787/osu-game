@@ -11,7 +11,7 @@
     <!-- Main content -->
     <div class="flex-1 grid grid-cols-12 h-[calc(100vh-5rem)]">
       <!-- Panel de Ranking (Izquierda) -->
-      <div class="col-span-9 relative overflow-hidden">
+      <div class="col-span-9 relative overflow-hidden z-[90]">
         <!-- Fondo con efecto parallax -->
         <div class="absolute inset-0 bg-cover bg-center bg-no-repeat blur-sm transform scale-105"
              :style="{ backgroundImage: `url(${selectedSong?.image_path})` }">
@@ -79,7 +79,7 @@
 
             <!-- Selector y lista con animaciones -->
             <div class="flex-1 p-8 overflow-hidden flex flex-col">
-              <div class="mb-6 animate-slideInDown">
+              <div class="mb-6 animate-slideInDown relative z-[9998]">
                 <DropdownSelector
                   v-model="selectedRanking"
                   :options="rankingTypes"
