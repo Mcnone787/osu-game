@@ -84,12 +84,22 @@
                     >
                       Ver Detalles
                     </Link>
-                    <button v-if="map.user_id === $page.props.auth.user.id"
-                            @click="deleteMap(map)"
-                            class="map-action-button text-red-400 hover:text-red-300 
-                                   hover:bg-red-500/20">
-                      Eliminar
-                    </button>
+                    <template v-if="map.user_id === $page.props.auth.user.id">
+                      <Link 
+                        :href="route('maps.edit', map)"
+                        class="map-action-button text-blue-400 hover:text-blue-300 
+                               hover:bg-blue-500/20"
+                      >
+                        Editar
+                      </Link>
+                      <button 
+                        @click="deleteMap(map)"
+                        class="map-action-button text-red-400 hover:text-red-300 
+                               hover:bg-red-500/20"
+                      >
+                        Eliminar
+                      </button>
+                    </template>
                   </div>
                 </div>
               </div>

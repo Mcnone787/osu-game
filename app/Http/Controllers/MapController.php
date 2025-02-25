@@ -36,7 +36,10 @@ class MapController extends Controller
 
     public function create()
     {
-        return Inertia::render('Game/Maps/Create');
+        return Inertia::render('Game/Maps/Create', [
+            'isEditing' => false,
+            'map' => null
+        ]);
     }
 
     public function store(Request $request)
@@ -137,26 +140,73 @@ class MapController extends Controller
         }
     }
 
+    public function edit(Map $map)
+    {
+        // Verificar que el usuario es el propietario del mapa
+        if ($map->user_id !== auth()->id()) {
+            abort(403, 'No tienes permiso para editar este mapa');
+        }
+
+        return Inertia::render('Game/Maps/Create', [
+            'isEditing' => true,
+            'map' => $map
+        ]);
+    }
+
     public function update(Request $request, Map $map)
     {
-        $request->validate([
-            'title' => 'string|max:255',
-            'artist' => 'string|max:255',
-            'bpm' => 'integer|min:1',
-            'difficulty' => 'string|in:easy,normal,hard,expert',
-            'audio' => 'nullable|file|mimes:mp3,wav,ogg|max:10240',
-            'notes' => 'array'
-        ]);
+        // Verificar que el usuario es el propietario del mapa
+        if ($map->user_id !== auth()->id()) {
+            abort(403, 'No tienes permiso para editar este mapa');
+        }
 
         try {
+            // Validación
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'artist' => 'required|string|max:255',
+                'bpm' => 'required|integer|min:1',
+                'difficulty' => 'required|in:easy,normal,hard,expert',
+                'notes' => 'required|json',
+                'audio' => 'nullable|file|mimes:mp3,wav,ogg|max:10240',
+                'image' => 'nullable|file|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'video' => 'nullable|file|mimes:mp4,mov,avi,wmv,flv,webm|max:20480'
+            ]);
+
+            // Preparar datos para actualizar
             $data = $request->only(['title', 'artist', 'bpm', 'difficulty', 'notes']);
 
-            // Si hay un nuevo archivo de audio
+            // Manejar archivo de audio si se proporciona uno nuevo
             if ($request->hasFile('audio')) {
-                // Eliminar el audio anterior
-                Storage::disk('public')->delete($map->audio_path);
-                // Guardar el nuevo audio
+                // Eliminar archivo anterior
+                if ($map->audio_path && Storage::disk('public')->exists($map->audio_path)) {
+                    Storage::disk('public')->delete($map->audio_path);
+                }
                 $data['audio_path'] = $request->file('audio')->store('maps/audio', 'public');
+            }
+
+            // Manejar imagen si se proporciona una nueva
+            if ($request->hasFile('image')) {
+                // Eliminar archivos anteriores
+                if ($map->image_path && Storage::disk('public')->exists($map->image_path)) {
+                    Storage::disk('public')->delete($map->image_path);
+                }
+                if ($map->thumbnail_path && Storage::disk('public')->exists($map->thumbnail_path)) {
+                    Storage::disk('public')->delete($map->thumbnail_path);
+                }
+                
+                $imagePath = $request->file('image')->store('maps/image', 'public');
+                $data['image_path'] = $imagePath;
+                $data['thumbnail_path'] = $imagePath; // Podrías procesar un thumbnail aquí si lo necesitas
+            }
+
+            // Manejar video si se proporciona uno nuevo
+            if ($request->hasFile('video')) {
+                // Eliminar archivo anterior
+                if ($map->video_path && Storage::disk('public')->exists($map->video_path)) {
+                    Storage::disk('public')->delete($map->video_path);
+                }
+                $data['video_path'] = $request->file('video')->store('maps/video', 'public');
             }
 
             // Actualizar el mapa
@@ -169,13 +219,26 @@ class MapController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            // Limpiar archivos nuevos si algo falla
+            if (isset($data['audio_path']) && Storage::disk('public')->exists($data['audio_path'])) {
+                Storage::disk('public')->delete($data['audio_path']);
+            }
+            if (isset($data['image_path']) && Storage::disk('public')->exists($data['image_path'])) {
+                Storage::disk('public')->delete($data['image_path']);
+            }
+            if (isset($data['video_path']) && Storage::disk('public')->exists($data['video_path'])) {
+                Storage::disk('public')->delete($data['video_path']);
+            }
+
+            \Log::error('Error actualizando mapa: ' . $e->getMessage());
+            
             return response()->json([
                 'success' => false,
-                'message' => 'Error al actualizar el mapa',
-                'error' => $e->getMessage()
+                'message' => 'Error al actualizar el mapa: ' . $e->getMessage()
             ], 500);
         }
     }
+
     public function validateFilesExtension($file, $allowedExtensions)
     {
         $extension = strtolower(pathinfo($file->getClientOriginalName(), PATHINFO_EXTENSION));
@@ -190,6 +253,7 @@ class MapController extends Controller
             'tamaño' => $file->getSize()
         ]);
     }
+
     public function show(Map $map)
     {
         return response()->json([

@@ -425,9 +425,20 @@
 import { ref, computed, watch, onUnmounted, onMounted } from 'vue'
 import axios from 'axios'
 import Spinner from '@/Components/Spinner.vue'
-import { router, Link } from '@inertiajs/vue3'
+import { router, Link, useForm } from '@inertiajs/vue3'
 import GameHeader from '@/Components/GameHeader.vue'
 import NotificationSystem from '@/Components/NotificationSystem.vue'
+
+const props = defineProps({
+  map: {
+    type: Object,
+    default: () => null
+  },
+  isEditing: {
+    type: Boolean,
+    default: false
+  }
+})
 
 const audioLoaded = ref(false)
 const isPlaying = ref(false)
@@ -437,21 +448,20 @@ const scrollSpeed = ref(100)
 const snapDivision = ref(4)
 const showMetronome = ref(true)
 const showBeatLines = ref(true)
-const notes = ref([])
+const notes = ref(props.isEditing && props.map ? JSON.parse(props.map.notes) : [])
 
 const audio = ref(null)
 const audioContext = ref(null)
 const audioSource = ref(null)
 const startTime = ref(0)
 
-
-const formData = ref({
-  title: '',
-  artist: '',
-  bpm: 120,
-  difficulty: 'normal',
+const formData = useForm({
+  title: props.isEditing ? props.map?.title : '',
+  artist: props.isEditing ? props.map?.artist : '',
+  bpm: props.isEditing ? props.map?.bpm : 120,
+  difficulty: props.isEditing ? props.map?.difficulty : 'normal',
   audio: null,
-  notes: [],
+  notes: props.isEditing ? props.map?.notes : [],
   image: null,
   video: null
 })
@@ -534,7 +544,7 @@ function handleAudioUpload(event) {
       return
     }
 
-    formData.value.audio = file
+    formData.audio = file
     audio.value = new Audio(URL.createObjectURL(file))
     audio.value.addEventListener('loadedmetadata', () => {
       duration.value = audio.value.duration
@@ -546,13 +556,14 @@ function handleAudioUpload(event) {
 function handleVideoUpload(event) {
   const file = event.target.files[0]
   if (file) {
-    formData.value.video = file
+    formData.video = file
   }
 }
+
 function handleImageUpload(event) {
   const file = event.target.files[0]
   if (file) {
-    formData.value.image = file
+    formData.image = file
     console.log(file);
   }
 }
@@ -580,12 +591,8 @@ function updatePlaybackTime() {
   }
 }
 
-
-
 // Función para manejar el click en el carril
 function handleLaneClick(event, laneIndex) {
-
-
   try {
     if (!event) {
       console.error('Evento es undefined');
@@ -618,8 +625,6 @@ function handleLaneClick(event, laneIndex) {
 
 // Función para agregar nota
 function addNoteAtPosition(lane, time) {
-
-
   try {
     if (lane === undefined || time === undefined) {
       console.error('Lane o time son undefined');
@@ -671,16 +676,11 @@ function highlightNote(noteId) {
   }
 }
 
-
-
-
-
-
 // Ajustar el tamaño visual de las notas
 const noteHeight = computed(() => {
-  if (!formData.value.bpm) return 48
+  if (!formData.bpm) return 48
   
-  const beatDuration = 60 / formData.value.bpm
+  const beatDuration = 60 / formData.bpm
   const snapDuration = beatDuration / snapDivision.value
   
   // Ajustar tamaño según el snap
@@ -690,14 +690,10 @@ const noteHeight = computed(() => {
   )
 })
 
-
-
-
-
 function snapToGrid(time) {
-  if (!formData.value.bpm) return time
+  if (!formData.bpm) return time
   
-  const beatDuration = 60 / formData.value.bpm
+  const beatDuration = 60 / formData.bpm
   const snapDuration = beatDuration / snapDivision.value
   return Math.round(time / snapDuration) * snapDuration
 }
@@ -721,9 +717,9 @@ function getNoteStyle(note) {
 
 // Función para calcular los beats visibles
 const visibleBeats = computed(() => {
-  if (!formData.value.bpm || !duration.value) return []
+  if (!formData.bpm || !duration.value) return []
   
-  const beatDuration = 60 / formData.value.bpm
+  const beatDuration = 60 / formData.bpm
   const totalBeats = Math.ceil(duration.value / beatDuration)
   return Array.from({ length: totalBeats }, (_, i) => i)
 })
@@ -744,7 +740,7 @@ watch(scrollPosition, (newPos) => {
 })
 
 // Añadir watch para actualizar posiciones cuando cambie el BPM o snapDivision
-watch([() => formData.value.bpm, () => snapDivision.value], () => {
+watch([() => formData.bpm, () => snapDivision.value], () => {
   if (notes.value.length > 0) {
     notes.value = notes.value.map(note => ({
       ...note,
@@ -755,9 +751,9 @@ watch([() => formData.value.bpm, () => snapDivision.value], () => {
 
 // Función para calcular y mostrar las líneas de snap
 const snapLines = computed(() => {
-  if (!formData.value.bpm || !duration.value) return []
+  if (!formData.bpm || !duration.value) return []
   
-  const beatDuration = 60 / formData.value.bpm
+  const beatDuration = 60 / formData.bpm
   const snapDuration = beatDuration / snapDivision.value
   const totalSnaps = Math.ceil(duration.value / snapDuration)
   
@@ -769,8 +765,8 @@ const snapLines = computed(() => {
 })
 
 // Cálculos para las líneas de beat
-const beatSpacing = computed(() => pixelsPerBeat.value * (60 / formData.value.bpm))
-const totalBeats = computed(() => Math.ceil(duration.value / (60 / formData.value.bpm)))
+const beatSpacing = computed(() => pixelsPerBeat.value * (60 / formData.bpm))
+const totalBeats = computed(() => Math.ceil(duration.value / (60 / formData.bpm)))
 
 // Iniciar el arrastre
 function startDragging() {
@@ -793,62 +789,86 @@ function stopDragging() {
   isDragging.value = false
 }
 
+// Función para mostrar notificaciones
+const showNotification = (message, type = 'success') => {
+  if (notificationSystem.value) {
+    notificationSystem.value.showNotification(message, type)
+  }
+}
+
+// Función para manejar errores
+function handleError(error) {
+  console.error('Error:', error)
+  let errorMessage = 'Ha ocurrido un error inesperado'
+  
+  if (error.response) {
+    // Error de respuesta del servidor
+    errorMessage = error.response.data.message || 'Error del servidor'
+  } else if (error.request) {
+    // Error de red
+    errorMessage = 'Error de conexión. Por favor, verifica tu conexión a internet.'
+  } else {
+    // Otro tipo de error
+    errorMessage = error.message
+  }
+  
+  showNotification(errorMessage, 'error')
+}
+
+// Función actualizada para guardar/actualizar
 async function saveMap() {
   try {
-    if (!formData.value.title.trim()) {
-      showNotification('El título es requerido', 'error')
-      return
-    }
-    if (!formData.value.artist.trim()) {
-      showNotification('El artista es requerido', 'error')
-      return
-    }
-    if (!formData.value.audio) {
-      showNotification('Debes subir un archivo de audio', 'error')
-      return
-    }
-
-    // Activar spinner
     isSaving.value = true
-
     const submitData = new FormData()
-    submitData.append('title', formData.value.title.trim())
-    submitData.append('artist', formData.value.artist.trim())
-    submitData.append('bpm', formData.value.bpm)
-    submitData.append('difficulty', formData.value.difficulty)
-    submitData.append('audio', formData.value.audio)
+    
+    // Añadir datos básicos
+    submitData.append('title', formData.title)
+    submitData.append('artist', formData.artist)
+    submitData.append('bpm', formData.bpm)
+    submitData.append('difficulty', formData.difficulty)
     submitData.append('notes', JSON.stringify(notes.value))
-    submitData.append('image', formData.value.image)
-    submitData.append('video', formData.value.video)
 
-    const response = await axios.post(route('maps.store'), submitData, {
+    // Añadir archivos solo si han sido seleccionados
+    if (formData.audio instanceof File) {
+      submitData.append('audio', formData.audio)
+    }
+    if (formData.image instanceof File) {
+      submitData.append('image', formData.image)
+    }
+    if (formData.video instanceof File) {
+      submitData.append('video', formData.video)
+    }
+
+    // Si estamos editando, necesitamos añadir el método _method para Laravel
+    if (props.isEditing) {
+      submitData.append('_method', 'PUT')
+    }
+
+    const url = props.isEditing ? 
+      route('maps.update', props.map.id) : 
+      route('maps.store')
+
+    const response = await axios.post(url, submitData, {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
       }
     })
 
     if (response.data.success) {
-      showNotification('¡Mapa guardado con éxito!')
+      showNotification(
+        props.isEditing ? 
+          '¡Mapa actualizado con éxito!' : 
+          '¡Mapa creado con éxito!',
+        'success'
+      )
       setTimeout(() => {
+        window.location.href = route('maps.index')
       }, 1500)
     }
   } catch (error) {
-    console.error('Error completo:', error)
-    
-    if (error.response?.status === 422) {
-      const errors = error.response.data.errors
-      if (errors) {
-        const firstError = Object.values(errors)[0][0]
-        showNotification(firstError, 'error')
-      } else {
-        showNotification('Error de validación en el formulario', 'error')
-      }
-    } else {
-      showNotification(error.response?.data?.message || 'Error al guardar el mapa', 'error')
-    }
+    handleError(error)
   } finally {
-    // Desactivar spinner
     isSaving.value = false
   }
 }
@@ -900,7 +920,6 @@ function deleteSelectedNotes() {
   selection.value.selectedNotes = [];
   console.log('Notas eliminadas');
   showNotification('Notas eliminadas')
-
 }
 
 // Modificar handleNoteClick para permitir eliminación con click siempre
@@ -1091,6 +1110,14 @@ onMounted(() => {
     container.focus()
     console.log('Editor container focused, selección limpia')
   }
+
+  if (props.isEditing && props.map?.audio_path) {
+    audio.value = new Audio('/storage/' + props.map.audio_path)
+    audio.value.addEventListener('loadedmetadata', () => {
+      duration.value = audio.value.duration
+      audioLoaded.value = true
+    })
+  }
 })
 
 // Limpiar event listeners en onUnmounted
@@ -1123,14 +1150,7 @@ const handleRightClick = (event) => {
   showNotification('Playhead movido')
 }
 
-// Función helper para mostrar notificaciones
-const showNotification = (message, type = 'success') => {
-  if (notificationSystem.value) {
-    notificationSystem.value.showNotification(message, type)
-  }
-}
-
-// Añadir función para buscar en el audio
+// Función para buscar en el audio
 const handleProgressClick = (event, side) => {
   if (!audio.value) return
   
@@ -1149,8 +1169,6 @@ const handleProgressClick = (event, side) => {
   currentTime.value = Math.min(newTime, duration.value)
   audio.value.currentTime = currentTime.value
 }
-
-
 
 // Limpiar selección al hacer click en el editor
 function handleEditorClick(event) {
