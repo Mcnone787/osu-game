@@ -14,9 +14,8 @@
     
     <!-- Overlay para el video -->
     <div class="video-overlay"></div>
-    <!-- Pantalla de inicio (z-index más alto) -->
-    <div class="relative z-10">
 
+    <!-- Pantalla de inicio -->
     <div v-if="!gameInitialized" 
          class="fixed inset-0 bg-black/95 flex items-center justify-center z-[60]">
       <div class="text-center space-y-6">
@@ -46,7 +45,7 @@
       </div>
     </div>
 
-    <!-- Overlay de cuenta regresiva (z-index más bajo) -->
+    <!-- Overlay de cuenta regresiva -->
     <div v-if="showCountdown" 
          class="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
       <div class="text-center">
@@ -57,23 +56,7 @@
     </div>
 
     <!-- HUD del juego -->
-    <div class="game-hud fixed top-0 left-0 right-0 p-4 flex justify-between items-center">
-      <!-- Info de la canción -->
-      <div class="flex items-center gap-4">
-        <button @click="exitGame" 
-                class="bg-purple-900/30 hover:bg-purple-900/50 
-                       text-white p-2 rounded-lg transition-all">
-          <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-        </button>
-        <div>
-          <h2 class="text-xl font-game">{{ map.title }}</h2>
-          <p class="text-sm text-gray-400">{{ map.artist }}</p>
-        </div>
-      </div>
-
-      <!-- Puntuación -->
+    <div class="game-hud fixed top-0 left-0 right-0 p-4 flex justify-end items-center">
       <div class="flex items-center gap-8">
         <div class="text-right">
           <div class="text-3xl font-mono font-bold">{{ score.toLocaleString() }}</div>
@@ -90,11 +73,40 @@
       </div>
     </div>
 
+    <!-- Menú de pausa -->
+    <div v-if="isPaused && gameStarted && !gameEnded" 
+         class="fixed inset-0 bg-black/95 flex items-center justify-center z-[70]">
+      <div class="text-center space-y-6 animate-fadeIn">
+        <h2 class="text-4xl font-game mb-8">Pausa</h2>
+        <div class="flex flex-col gap-4">
+          <button @click="resumeGame" 
+                  class="bg-gradient-to-r from-pink-600/40 to-purple-600/40 
+                         hover:from-pink-500/60 hover:to-purple-500/60 
+                         text-white px-8 py-3 rounded-lg transition-all
+                         font-game text-xl border border-pink-500/30
+                         hover:scale-105 hover:shadow-[0_0_15px_rgba(236,72,153,0.3)]">
+            Continuar
+          </button>
+          <button @click="restartGame" 
+                  class="bg-purple-900/30 hover:bg-purple-900/50 
+                         text-white px-8 py-3 rounded-lg transition-all
+                         font-game text-xl border border-purple-500/30">
+            Reintentar
+          </button>
+          <button @click="exitGame" 
+                  class="bg-pink-900/30 hover:bg-pink-900/50 
+                         text-white px-8 py-3 rounded-lg transition-all
+                         font-game text-xl border border-pink-500/30">
+            Salir
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Área de juego -->
     <div class="game-area relative h-screen">
-      <!-- Feedback de hits en las posiciones de las flechas -->
+      <!-- Feedback de hits -->
       <div class="hit-feedback-container fixed inset-0 pointer-events-none z-40">
-        <!-- Feedback izquierdo -->
         <div class="feedback-left fixed left-[25%] bottom-[30%] w-[30%]">
           <transition name="feedback">
             <div v-if="leftFeedback" 
@@ -105,8 +117,6 @@
             </div>
           </transition>
         </div>
-
-        <!-- Feedback derecho -->
         <div class="feedback-right fixed right-[25%] bottom-[30%] w-[30%]">
           <transition name="feedback">
             <div v-if="rightFeedback"
@@ -127,10 +137,7 @@
         <div v-for="lane in 4" :key="lane" 
              class="note-lane w-20 relative" 
              style="height: calc(100vh + 5rem)">
-          <!-- Fondo del carril con gradiente (opacidad aumentada) -->
           <div class="lane-background absolute inset-0"></div>
-          
-          <!-- Receptor de notas -->
           <div class="note-receptor absolute bottom-0 w-full h-16 
                       bg-purple-900/40 rounded-lg border-2 border-purple-500/30
                       transition-all z-10"
@@ -140,8 +147,6 @@
               {{ ['D', 'F', 'J', 'K'][lane-1] }}
             </span>
           </div>
-          
-          <!-- Notas -->
           <div v-for="note in notes.filter(n => n.lane === lane-1 && !n.hit && !n.missed)" 
                :key="note.timing"
                class="absolute w-full h-16 bg-purple-500/50 rounded-lg border-2 
@@ -153,27 +158,147 @@
     </div>
 
     <!-- Pantalla de resultados -->
-    <div v-if="gameEnded" 
-         class="fixed inset-0 bg-black/95 flex items-center justify-center z-50">
-      <div class="text-center">
-        <h2 class="text-4xl font-game mb-8">Resultados</h2>
-        <div class="space-y-4 mb-8">
-          <div class="text-6xl font-mono font-bold mb-2">{{ score.toLocaleString() }}</div>
-          <div class="text-xl text-pink-400">Combo Máximo: x{{ maxCombo }}</div>
-          <div class="text-xl text-purple-400">Precisión: {{ accuracy.toFixed(2) }}%</div>
+    <div v-if="gameEnded" class="fixed inset-0 flex items-center justify-center z-50">
+      <!-- Fondo con blur y overlay más claro -->
+      <div class="absolute inset-0 bg-[rgb(0_0_0_/27%)] backdrop-blur-md"></div>
+      
+      <!-- Contenedor principal con animación -->
+      <div class="relative z-10 w-full max-w-4xl mx-auto results-container">
+        <!-- Sección superior con información de la canción -->
+        <div class="flex items-center gap-6 mb-8 px-8 results-stats-enter animate-delay-1">
+          <div class="w-32 h-32 rounded-xl overflow-hidden border-2 border-white/10">
+            <img :src="map.thumbnail_path" alt="Song thumbnail" class="w-full h-full object-cover">
+          </div>
+          <div class="flex-1 text-left">
+            <h2 class="text-3xl font-game text-white mb-2">{{ map.title }}</h2>
+            <p class="text-xl text-gray-400">{{ map.artist }}</p>
+            <p class="text-sm text-gray-500 mt-1">Mapped by {{ map.creator }}</p>
+          </div>
+          <!-- Puntuación grande a la derecha -->
+          <div class="text-right">
+            <div class="text-7xl font-mono font-bold tracking-wider text-white">
+              {{ score.toLocaleString() }}
+            </div>
+            <div class="text-lg text-purple-400">Puntuación Total</div>
+          </div>
         </div>
-        <div class="flex justify-center gap-4">
+
+        <!-- Contenedor principal de estadísticas -->
+        <div class="bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 results-stats-enter animate-delay-2">
+          <!-- Estadísticas principales -->
+          <div class="grid grid-cols-3 gap-8 mb-8">
+            <!-- Precisión -->
+            <div class="text-center">
+              <div class="text-5xl font-bold mb-2 text-white">
+                {{ accuracy.toFixed(2) }}%
+              </div>
+              <div class="text-purple-400">Precisión</div>
+            </div>
+            <!-- Combo Máximo -->
+            <div class="text-center">
+              <div class="text-5xl font-bold mb-2 text-white">
+                {{ maxCombo }}x
+              </div>
+              <div class="text-pink-400">Combo Máximo</div>
+            </div>
+            <!-- Grado (basado en la precisión) -->
+            <div class="text-center">
+              <div class="text-7xl font-bold mb-2" :class="{
+                'text-yellow-400': accuracy >= 95,  // S
+                'text-purple-400': accuracy >= 90 && accuracy < 95,  // A
+                'text-blue-400': accuracy >= 80 && accuracy < 90,  // B
+                'text-green-400': accuracy >= 70 && accuracy < 80,  // C
+                'text-red-400': accuracy < 70  // D
+              }">
+                {{ accuracy >= 95 ? 'S' : 
+                   accuracy >= 90 ? 'A' : 
+                   accuracy >= 80 ? 'B' : 
+                   accuracy >= 70 ? 'C' : 'D' }}
+              </div>
+              <div class="text-gray-400">Grado</div>
+            </div>
+          </div>
+
+          <!-- Detalles de hits con animación retrasada -->
+          <div class="grid grid-cols-2 gap-x-16 gap-y-6 results-stats-enter animate-delay-3">
+            <!-- Hits perfectos -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-3 h-3 rounded-full bg-green-400"></div>
+                <span class="text-lg text-white">Perfectos</span>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-2xl font-bold text-white">
+                  {{ notes.filter(n => n.hit && n.hitType === 'perfect').length }}
+                </span>
+                <span class="text-sm text-green-400">+100</span>
+              </div>
+            </div>
+
+            <!-- Hits buenos -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+                <span class="text-lg text-white">Buenos</span>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-2xl font-bold text-white">
+                  {{ notes.filter(n => n.hit && n.hitType === 'good').length }}
+                </span>
+                <span class="text-sm text-yellow-400">+50</span>
+              </div>
+            </div>
+
+            <!-- Notas perdidas -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-3 h-3 rounded-full bg-red-400"></div>
+                <span class="text-lg text-white">Perdidas</span>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-2xl font-bold text-white">
+                  {{ notes.filter(n => n.missed).length }}
+                </span>
+                <span class="text-sm text-red-400">+0</span>
+              </div>
+            </div>
+
+            <!-- Pulsaciones incorrectas -->
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-3 h-3 rounded-full bg-red-600"></div>
+                <span class="text-lg text-white">Incorrectas</span>
+              </div>
+              <div class="flex items-center gap-4">
+                <span class="text-2xl font-bold text-white">
+                  {{ missedPresses }}
+                </span>
+                <span class="text-sm text-red-600">-10</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de acción con animación final -->
+        <div class="flex justify-center gap-6 mt-8 results-stats-enter animate-delay-4">
           <button @click="restartGame" 
-                  class="bg-purple-900/30 hover:bg-purple-900/50 
-                         text-white px-6 py-2 rounded-lg transition-all">
+                  class="bg-purple-500/20 hover:bg-purple-500/30 
+                         text-white px-8 py-3 rounded-xl transition-all
+                         font-game text-xl border border-purple-500/50
+                         hover:scale-105 hover:shadow-[0_0_20px_rgba(168,85,247,0.3)]
+                         flex items-center gap-2">
+            <i class="fas fa-redo"></i>
             Reintentar
           </button>
           <button @click="exitGame" 
-                  class="bg-pink-900/30 hover:bg-pink-900/50 
-                         text-white px-6 py-2 rounded-lg transition-all">
-            Salir
+                  class="bg-pink-500/20 hover:bg-pink-500/30 
+                         text-white px-8 py-3 rounded-xl transition-all
+                         font-game text-xl border border-pink-500/50
+                         hover:scale-105 hover:shadow-[0_0_20px_rgba(236,72,153,0.3)]
+                         flex items-center gap-2">
+            <i class="fas fa-home"></i>
+            Volver al Menú
           </button>
-        </div>
         </div>
       </div>
     </div>
@@ -183,6 +308,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
+import axios from 'axios'
 
 const props = defineProps({
   map: {
@@ -223,10 +349,11 @@ let rightTimeoutId = null  // Guardamos las referencias de los timeouts
 
 // Configuración del juego
 const SCROLL_SPEED = 400 // píxeles por segundo
-const PERFECT_WINDOW = 80 // ms (aumentado para más tolerancia)
-const GOOD_WINDOW = 200 // ms (aumentado para más tolerancia)
-const MISS_WINDOW =300 // ms
+const PERFECT_WINDOW = 80 // ms
+const GOOD_WINDOW = 200 // ms
+const MISS_WINDOW = 300 // ms
 const NOTE_OFFSET = 4000 // ms
+const RESULTS_DELAY = 2000 // ms - Tiempo de espera antes de mostrar resultados (2 segundos por defecto)
 
 // Textos aleatorios para cada tipo de feedback
 const feedbackTexts = {
@@ -234,6 +361,15 @@ const feedbackTexts = {
   good: ['¡BIEN!', '¡GENIAL!', 'GOOD!', '¡SIGUE ASÍ!', '¡CONTINÚA!'],
   miss: ['¡MISS!', '¡OH NO!', '¡CASI!', '¡SIGUIENTE!', '¡CONCENTRATE!']
 }
+
+// Añadir estado de pausa
+const isPaused = ref(false)
+
+// Añadir nueva variable para contar fallos por pulsaciones incorrectas
+const missedPresses = ref(0);
+
+// Variable para controlar los logs
+let lastLoggedTime = 0;
 
 // Inicializar notas
 function initializeNotes() {
@@ -269,39 +405,46 @@ function updateNotes() {
   const currentAudioTime = (audioElement.value.currentTime * 1000) + NOTE_OFFSET;
   currentTime.value = currentAudioTime;
   
-  console.log('Update time:', {
-    audioTime: audioElement.value.currentTime * 1000,
-    withOffset: currentAudioTime,
-    activeNotes: notes.value.filter(n => !n.hit && !n.missed).length
-  });
+  // Log cada segundo (para no saturar la consola)
+  if (Math.floor(audioElement.value.currentTime) !== Math.floor(lastLoggedTime)) {
+    console.log('=== Debug updateNotes ===');
+    console.log('Tiempo actual:', audioElement.value.currentTime);
+    console.log('Duración total:', audioElement.value.duration);
+    console.log('Notas restantes:', notes.value.filter(n => !n.hit && !n.missed).length);
+    lastLoggedTime = audioElement.value.currentTime;
+  }
   
   notes.value.forEach(note => {
     if (!note.hit && !note.missed) {
       const timeUntilHit = note.timing - currentTime.value;
       note.y = (timeUntilHit / 1000) * SCROLL_SPEED;
       
-      // Debug para notas cerca del punto de golpe
-      if (Math.abs(timeUntilHit) < MISS_WINDOW) {
-        console.log('Nota cerca:', {
-          lane: note.lane,
-          timeUntilHit,
-          y: note.y,
-          timing: note.timing
-        });
-      }
-      
-      // Solo marcar como perdida si realmente pasó demasiado tiempo
+      // Marcar como perdida si pasó demasiado tiempo
       if (timeUntilHit < -MISS_WINDOW && note.y < -50) {
         note.missed = true;
+        note.hitType = 'miss';
         combo.value = 0;
-        console.log('Nota perdida:', {
-          timeUntilHit,
-          y: note.y,
-          note
-        });
+        // Actualizar precisión en tiempo real
+        updateAccuracy();
+        showHitFeedback('miss', note.lane);
       }
     }
   });
+  
+  checkGameEnd();
+}
+
+// Modificar la función updateAccuracy para incluir pulsaciones incorrectas
+function updateAccuracy() {
+  const totalNotes = notes.value.filter(note => note.hit || note.missed).length;
+  const totalAttempts = totalNotes + missedPresses.value; // Incluir pulsaciones incorrectas
+  if (totalAttempts === 0) return;
+
+  const perfectHits = notes.value.filter(note => note.hit && note.hitType === 'perfect').length;
+  const goodHits = notes.value.filter(note => note.hit && note.hitType === 'good').length;
+  
+  // Calcular precisión incluyendo pulsaciones incorrectas
+  accuracy.value = ((perfectHits * 100 + goodHits * 50) / (totalAttempts * 100)) * 100;
 }
 
 // Función para obtener texto aleatorio
@@ -367,72 +510,80 @@ const showHitFeedback = (type, lane) => {
   }
 }
 
-// Manejar golpes de notas
+// Modificar handleKeyDown para incluir más logs
 const handleKeyDown = (event) => {
-  if (!gameStarted.value || showCountdown.value) return // Cambiado gameInitialized por gameStarted
+  if (event.key === 'Escape') {
+    if (isPaused.value) {
+      resumeGame();
+    } else {
+      pauseGame();
+    }
+    return;
+  }
   
-  console.log('Tecla presionada:', event.key) // Debug para ver si se detecta la tecla
-
-  // Mapeo de teclas a carriles
+  if (isPaused.value || !gameStarted.value || showCountdown.value) return;
+  
   const keyToLane = {
     'd': 0,
     'f': 1,
     'j': 2,
     'k': 3
-  }
+  };
 
-  const lane = keyToLane[event.key.toLowerCase()]
-  if (lane === undefined) return
+  const lane = keyToLane[event.key.toLowerCase()];
+  if (lane === undefined) return;
 
-  // Marcar el carril como activo
-  activeKeys.value[lane] = true
-  keyPressTime.value[lane] = Date.now()
+  activeKeys.value[lane] = true;
+  keyPressTime.value[lane] = Date.now();
 
-  // Obtener el tiempo actual correctamente
   const currentTime = audioElement.value ? 
-    (audioElement.value.currentTime * 1000) + NOTE_OFFSET : // Usar NOTE_OFFSET en lugar de offset.value
-    0
+    (audioElement.value.currentTime * 1000) + NOTE_OFFSET :
+    0;
 
-  console.log('Tiempo actual:', currentTime) // Debug
+  console.log('=== Debug Puntuación ===');
+  console.log('Puntuación actual:', score.value);
+  console.log('Combo actual:', combo.value);
 
-  // Encontrar la nota más cercana en este carril
   const nearestNote = notes.value.find(note => 
     note.lane === lane && 
     !note.hit &&
     !note.missed &&
     Math.abs(currentTime - note.timing) <= GOOD_WINDOW
-  )
+  );
 
   if (nearestNote) {
-    const timeDiff = Math.abs(currentTime - nearestNote.timing)
+    const timeDiff = Math.abs(currentTime - nearestNote.timing);
     
-    console.log('Nota encontrada:', {
-      lane,
-      currentTime,
-      noteTiming: nearestNote.timing,
-      timeDiff
-    })
-
-    // Evaluar la precisión del hit
     if (timeDiff <= PERFECT_WINDOW) {
-      nearestNote.hit = true
-      score.value += 100
-      combo.value++
-      maxCombo.value = Math.max(maxCombo.value, combo.value)
-      showHitFeedback('perfect', nearestNote.lane)
+      nearestNote.hit = true;
+      nearestNote.hitType = 'perfect';
+      score.value += 100;
+      combo.value++;
+      maxCombo.value = Math.max(maxCombo.value, combo.value);
+      console.log('Hit perfecto! Nueva puntuación:', score.value);
+      updateAccuracy();
+      showHitFeedback('perfect', nearestNote.lane);
     } else if (timeDiff <= GOOD_WINDOW) {
-      nearestNote.hit = true
-      score.value += 50
-      combo.value++
-      maxCombo.value = Math.max(maxCombo.value, combo.value)
-      showHitFeedback('good', nearestNote.lane)
+      nearestNote.hit = true;
+      nearestNote.hitType = 'good';
+      score.value += 50;
+      combo.value++;
+      maxCombo.value = Math.max(maxCombo.value, combo.value);
+      console.log('Hit bueno! Nueva puntuación:', score.value);
+      updateAccuracy();
+      showHitFeedback('good', nearestNote.lane);
     }
   } else {
-    // Feedback para miss
-    combo.value = 0
-    showHitFeedback('miss', lane)
+    // Penalización por presionar cuando no hay nota
+    missedPresses.value++;
+    combo.value = 0;
+    // Reducir puntuación por fallo
+    score.value = Math.max(0, score.value - 10); // Evita que baje de 0
+    console.log('Miss! Nueva puntuación:', score.value);
+    showHitFeedback('miss', lane);
+    updateAccuracy();
   }
-}
+};
 
 const handleKeyUp = (event) => {
   const keyToLane = {
@@ -526,21 +677,108 @@ function startGame() {
   }, 1000);
 }
 
-// Terminar el juego
-function endGame() {
-  gameEnded.value = true
-  gameStarted.value = false
-  if (gameLoop.value) {
-    clearInterval(gameLoop.value)
+// Función para verificar si el juego ha terminado
+function checkGameEnd() {
+  if (!audioElement.value || !gameStarted.value || gameEnded.value) return;
+  
+  // Logs para depuración
+  console.log('=== Debug checkGameEnd ===');
+  console.log('Audio current time:', audioElement.value.currentTime);
+  console.log('Audio duration:', audioElement.value.duration);
+  console.log('Video current time:', videoBackground.value?.currentTime);
+  console.log('Video duration:', videoBackground.value?.duration);
+  console.log('Notas totales:', notes.value.length);
+  console.log('Notas procesadas:', notes.value.filter(note => note.hit || note.missed).length);
+  console.log('gameStarted:', gameStarted.value);
+  console.log('gameEnded:', gameEnded.value);
+  
+  // Verificar si la canción ha terminado
+  const audioTimeRemaining = audioElement.value.duration - audioElement.value.currentTime;
+  console.log('Tiempo restante de audio:', audioTimeRemaining, 'segundos');
+  
+  // Verificar si todas las notas han sido procesadas
+  const allNotesProcessed = notes.value.every(note => note.hit || note.missed);
+  console.log('¿Todas las notas procesadas?:', allNotesProcessed);
+  
+  // Solo terminar si realmente el audio está cerca del final (menos de 0.5 segundos) o todas las notas han sido procesadas
+  if ((audioTimeRemaining <= 0.5 && !audioElement.value.ended) || audioElement.value.ended) {
+    console.log('Terminando juego por fin de audio');
+    endGame();
+  } else if (allNotesProcessed && audioTimeRemaining <= 0.5) {
+    console.log('Terminando juego por notas completadas');
+    endGame();
   }
-  // Calcular precisión final
-  const totalNotes = notes.value.length
-  const hitNotes = notes.value.filter(note => note.hit).length
-  accuracy.value = (hitNotes / totalNotes) * 100
+}
+
+// Terminar el juego
+async function endGame() {
+  if (gameEnded.value) return;
+  
+  // Detener el juego pero no mostrar resultados aún
+  gameStarted.value = false;
+  
+  if (gameLoop.value) {
+    clearInterval(gameLoop.value);
+  }
+  
+  if (audioElement.value) {
+    audioElement.value.pause();
+  }
+  
+  if (videoBackground.value) {
+    videoBackground.value.pause();
+  }
+  
+  // Marcar todas las notas restantes como perdidas
+  notes.value.forEach(note => {
+    if (!note.hit && !note.missed) {
+      note.missed = true;
+      note.hitType = 'miss';
+    }
+  });
+  
+  // Actualizar precisión final
+  updateAccuracy();
+
+  // Log del estado final
+  console.log('=== Debug Estado Final ===');
+  console.log('Puntuación final:', score.value);
+  console.log('Combo máximo:', maxCombo.value);
+  console.log('Precisión:', accuracy.value);
+  console.log('Notas perfectas:', notes.value.filter(n => n.hit && n.hitType === 'perfect').length);
+  console.log('Notas buenas:', notes.value.filter(n => n.hit && n.hitType === 'good').length);
+  console.log('Notas perdidas:', notes.value.filter(n => n.missed).length);
+  console.log('Pulsaciones incorrectas:', missedPresses.value);
+
+  // Esperar el tiempo configurado antes de mostrar los resultados
+  await new Promise(resolve => setTimeout(resolve, RESULTS_DELAY));
+  
+  // Ahora sí mostrar la pantalla de resultados
+  gameEnded.value = true;
+
+  try {
+    // Asegurarse de que la puntuación sea un número válido
+    const finalScore = Math.max(0, Math.floor(score.value));
+    console.log('Enviando puntuación al servidor:', finalScore);
+
+    const response = await axios.post(route('game.rankings.save', { map: props.map.id }), {
+      score: finalScore,
+      max_combo: maxCombo.value,
+      accuracy: accuracy.value
+    });
+
+    if (response.data.success) {
+      console.log('Ranking guardado:', response.data.ranking);
+      console.log('Mensaje:', response.data.message);
+    }
+  } catch (error) {
+    console.error('Error al guardar ranking:', error);
+  }
 }
 
 // Salir del juego
 function exitGame() {
+  isPaused.value = false
   if (audioElement.value) {
     audioElement.value.pause()
     audioElement.value = null
@@ -553,20 +791,7 @@ function exitGame() {
 
 // Reiniciar el juego
 function restartGame() {
-  if (audioElement.value) {
-    audioElement.value.pause()
-    audioElement.value = null
-  }
-  if (gameLoop.value) {
-    clearInterval(gameLoop.value)
-  }
-  score.value = 0
-  combo.value = 0
-  maxCombo.value = 0
-  accuracy.value = 100
-  gameEnded.value = false
-  notes.value = []
-  startGame()
+  window.location.reload()
 }
 
 // Nueva función para inicializar el juego
@@ -579,6 +804,34 @@ function initializeGame() {
   
   // Luego iniciar el juego
   startGame()
+}
+
+// Función para pausar el juego
+const pauseGame = () => {
+  if (!gameStarted.value || gameEnded.value || showCountdown.value) return
+  
+  isPaused.value = true
+  if (audioElement.value) {
+    audioElement.value.pause()
+  }
+  if (videoBackground.value) {
+    videoBackground.value.pause()
+  }
+  if (gameLoop.value) {
+    clearInterval(gameLoop.value)
+  }
+}
+
+// Función para reanudar el juego
+const resumeGame = () => {
+  isPaused.value = false
+  if (audioElement.value) {
+    audioElement.value.play()
+  }
+  if (videoBackground.value) {
+    videoBackground.value.play()
+  }
+  gameLoop.value = setInterval(updateNotes, 16)
 }
 
 onMounted(() => {
@@ -791,5 +1044,72 @@ watch(() => props.map, async (newMap) => {
 
 .note {
   @apply bg-gradient-to-b from-purple-500/50 to-pink-500/50;
+}
+
+/* Animación para el menú de pausa */
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animaciones para la pantalla de resultados */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-100px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.results-enter-active {
+  animation: slideDown 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.results-container {
+  animation: slideDown 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.results-stats-enter {
+  animation: fadeIn 0.5s ease forwards;
+  animation-delay: 0.3s;
+  opacity: 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Clases para las animaciones secuenciales */
+.animate-delay-1 {
+  animation-delay: 0.2s;
+}
+.animate-delay-2 {
+  animation-delay: 0.4s;
+}
+.animate-delay-3 {
+  animation-delay: 0.6s;
+}
+.animate-delay-4 {
+  animation-delay: 0.8s;
 }
 </style> 

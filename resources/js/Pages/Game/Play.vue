@@ -250,8 +250,8 @@
           <div class="mt-8 text-center">
             <!-- Spinner mientras carga -->
             <div v-if="isLoading" 
-                 class="inline-block animate-spin rounded-full h-8 w-8 border-4 
-                        border-purple-500 border-t-transparent">
+                 class="inline-block animate-spin-custom rounded-full h-8 w-8 border-4 
+                        border-t-purple-500 border-r-purple-500/50 border-b-purple-500/30 border-l-purple-500/10">
             </div>
 
             <!-- Mensaje de fin -->
@@ -289,7 +289,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import axios from 'axios'
 import DropdownSelector from '@/Components/DropdownSelector.vue'
@@ -338,25 +338,26 @@ async function loadMoreSongs() {
         const response = await axios.get(route('game.play'), {
             params: {
                 page: currentPage.value
-            }
+            },
+            timeout: 30000 // Timeout de 30 segundos
         })
 
-        const newSongs = response.data.data
+        const newSongs = response.data.data.filter(song => song !== null)
         
-        // Debug logs
-        console.log('Nueva página cargada:', currentPage.value)
-        console.log('Nuevas canciones:', newSongs)
-        console.log('Has more:', response.data.has_more)
-
         if (newSongs.length > 0) {
             songsList.value = [...songsList.value, ...newSongs]
         }
 
-        // Solo establecer reachedEnd si realmente no hay más páginas
-        reachedEnd.value = !response.data.has_more
+        reachedEnd.value = !response.data.has_more || newSongs.length === 0
         
     } catch (error) {
         console.error('Error cargando más canciones:', error)
+        // Mostrar notificación de error si existe el sistema de notificaciones
+        if (error.response?.data?.message) {
+            console.error('Error del servidor:', error.response.data.message)
+        }
+        // Revertir el incremento de página en caso de error
+        currentPage.value--
     } finally {
         isLoading.value = false
     }
@@ -370,21 +371,34 @@ const currentRankings = computed(() => {
 
 const noSongSelected = computed(() => !selectedSong.value)
 const selectSong = async (song) => {
-  if (selectedSong.value?.id === song.id) return
-  
-  isChangingSong.value = true
-  selectedSong.value = null // Forzamos un reset
-  
-  await nextTick() // Esperamos el siguiente ciclo de renderizado
-  selectedSong.value = song
-  
-  setTimeout(() => {
-    isChangingSong.value = false
-  }, 600)
+    if (!song || selectedSong.value?.id === song.id) return
+    
+    try {
+        isChangingSong.value = true
+        selectedSong.value = null
+        
+        await nextTick()
+        selectedSong.value = song
+        
+    } catch (error) {
+        console.error('Error al seleccionar la canción:', error)
+    } finally {
+        setTimeout(() => {
+            isChangingSong.value = false
+        }, 600)
+    }
 }
 function startGame(song) {
-    musicid.value = song.id
-    router.visit(route('game.play.start', { map: song.id }))
+    try {
+        if (!song || !song.id) {
+            console.error('Canción inválida')
+            return
+        }
+        musicid.value = song.id
+        router.visit(route('game.play.start', { map: song.id }))
+    } catch (error) {
+        console.error('Error al iniciar el juego:', error)
+    }
 }
 // Función para detectar scroll con debounce
 let scrollTimeout
@@ -461,6 +475,19 @@ const formatDuration = (seconds) => {
   const remainingSeconds = Math.floor(seconds % 60);
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 };
+
+// Añadir watch para manejar errores en la carga inicial
+watch(() => props.initialSongs, (newValue) => {
+    if (newValue.error) {
+        console.error('Error en la carga inicial:', newValue.error)
+        songsList.value = []
+        reachedEnd.value = true
+    } else {
+        songsList.value = newValue.data.filter(song => song !== null)
+        currentPage.value = newValue.current_page || 1
+        reachedEnd.value = !newValue.has_more
+    }
+}, { immediate: true })
 </script>
 
 <style scoped>
@@ -999,6 +1026,25 @@ const formatDuration = (seconds) => {
     transform: scale(1);
     opacity: 1;
   }
+}
+
+/* Añadir estilos para estados de error */
+.error-state {
+    @apply text-red-400 bg-red-900/20 border-red-500/30;
+}
+
+/* Animación personalizada para el spinner */
+@keyframes spin-custom {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin-custom {
+    animation: spin-custom 1s linear infinite;
 }
 </style>
 

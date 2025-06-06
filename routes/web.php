@@ -32,4 +32,8 @@ Route::post('/game/login', [GameAuthController::class, 'login'])->name('game.log
 Route::post('/game/register', [GameAuthController::class, 'register'])->name('game.register');
 Route::post('/game/logout', [GameAuthController::class, 'logout'])->name('game.logout');
 
+// Rutas para rankings
+Route::post('/game/rankings/{map}', [GameController::class, 'saveRanking'])->name('game.rankings.save')->middleware('auth');
+Route::get('/game/rankings/{map}', [GameController::class, 'getRankings'])->name('game.rankings.get');
+
 require __DIR__.'/auth.php';
