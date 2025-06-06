@@ -165,7 +165,7 @@
                         </span>
                         <div class="relative">
                           <img :src="rank.avatar" :alt="rank.player" 
-                               class="w-12 h-12 rounded-full border-2 border-purple-500/50">
+                               class="w-12 h-12 rounded-full border-2 border-purple-500/50" style="object-fit: cover;">
                           <div class="absolute -bottom-1 -right-1 bg-purple-500 
                                     text-xs px-1.5 py-px rounded-full text-[10px] text-white">
                             Lv.{{ rank.level }}
@@ -314,8 +314,7 @@ const props = defineProps({
 // Definir los tipos de ranking disponibles
 const rankingTypes = [
     { id: 'global', name: 'Global Ranking', icon: markRaw(GlobeAltIcon) },
-    { id: 'friends', name: 'Friends Ranking', icon: markRaw(UserGroupIcon) },
-    { id: 'country', name: 'Country Ranking', icon: markRaw(FlagIcon) }
+
 ]
 
 const currentPage = ref(1)
@@ -852,10 +851,7 @@ watch(() => props.initialSongs, (newValue) => {
   @apply bg-purple-500/50 rounded-full hover:bg-purple-400/50;
 }
 
-.rank-number {
-  @apply border-2 rounded-full w-10 h-10 
-         flex items-center justify-center text-2xl font-bold font-game;
-}
+
 
 /* Animaciones para el cambio de mapa */
 .song-header {

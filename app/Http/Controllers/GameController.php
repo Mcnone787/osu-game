@@ -70,10 +70,12 @@ class GameController extends Controller
                 ],
                 'currentUser' => auth()->user() ? [
                     'name' => auth()->user()->name,
-                    'guest' => false
+                    'guest' => false,
+                    'avatar' => auth()->user()->avatar ? asset('storage/' . auth()->user()->avatar) : asset('imgs/avatars/default.jpg')
                 ] : [
                     'name' => 'Guest',
-                    'guest' => true
+                    'guest' => true,
+                    'avatar' => asset('imgs/avatars/default.jpg')
                 ]
             ]);
         } catch (\Exception $e) {
@@ -86,10 +88,12 @@ class GameController extends Controller
                 ],
                 'currentUser' => auth()->user() ? [
                     'name' => auth()->user()->name,
-                    'guest' => false
+                    'guest' => false,
+                    'avatar' => auth()->user()->avatar ? asset('storage/' . auth()->user()->avatar) : asset('imgs/avatars/default.jpg')
                 ] : [
                     'name' => 'Guest',
-                    'guest' => true
+                    'guest' => true,
+                    'avatar' => asset('imgs/avatars/default.jpg')
                 ],
                 'error' => 'Error al cargar las canciones'
             ]);
@@ -151,7 +155,7 @@ class GameController extends Controller
                 'duration' => $duration,
                 'creator' => $map->user->name,
                 'audio_path' => asset('storage/' . $map->audio_path),
-                'rankings' => $this->getMockRankings(),
+                'rankings' => $this->getMockRankings($map->id),
                 'image_path' => asset('storage/' . $map->image_path),
                 'have_image' => !empty($map->image_path),
                 'thumbnail_path' => asset('storage/' . $map->thumbnail_path),
@@ -171,29 +175,41 @@ class GameController extends Controller
         return sprintf('%d:%02d', $minutes, $remainingSeconds);
     }
 
-    private function getMockRankings()
+    private function getMockRankings($map_id)
     {
-        return [
-            'global' => [
-                [
-                    'position' => 1,
-                    'player' => "★ MasterRhythm ★",
-                    'score' => 1234567,
-                    'accuracy' => 99.87,
-                    'combo' => "1,458",
-                    'date' => now()->subDays(1)->format('Y-m-d'),
-                    'avatar' => asset('imgs/avatars/default.jpg'),
-                    'level' => 99
-                ],
-                // ... otros rankings
-            ],
-            'friends' => [
-                // ... rankings de amigos
-            ],
-            'country' => [
-                // ... rankings por país
-            ]
-        ];
+        try {
+            $globalRankings = Ranking::with('user')
+                ->where('map_id', $map_id)
+                ->orderByDesc('score')
+                ->take(10)
+                ->get()
+                ->map(function ($ranking, $index) {
+                    return [
+                        'position' => $index + 1,
+                        'player' => $ranking->user->name,
+                        'score' => $ranking->score,
+                        'accuracy' => $ranking->accuracy,
+                        'combo' => number_format($ranking->max_combo),
+                        'date' => $ranking->created_at->format('Y-m-d'),
+                        'avatar' => $ranking->user->avatar ? asset('storage/' . $ranking->user->avatar) : asset('imgs/avatars/default.jpg'),
+                        'level' => 1, // Por implementar sistema de niveles
+                        'grade' => $ranking->grade
+                    ];
+                });
+
+            return [
+                'global' => $globalRankings,
+                'friends' => [], // Por implementar
+                'country' => []  // Por implementar
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Error obteniendo rankings: ' . $e->getMessage());
+            return [
+                'global' => [],
+                'friends' => [],
+                'country' => []
+            ];
+        }
     }
 
     private function getAudioDuration($audioPath)

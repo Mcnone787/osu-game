@@ -24,8 +24,11 @@ Route::middleware(['auth'])->group(function () {
     // Ruta para subir el archivo de audio
     Route::post('/maps/upload-audio', [MapController::class, 'uploadAudio'])->name('maps.upload-audio');
 
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile');
+    // Rutas del perfil
     Route::get('/game/profile', [ProfileController::class, 'show'])->name('game.profile');
+    Route::post('/game/profile', [ProfileController::class, 'updateProfile'])->name('game.profile.update');
+    Route::post('/game/profile/password', [ProfileController::class, 'updatePassword'])->name('game.profile.password');
+    Route::delete('/game/profile', [ProfileController::class, 'deleteAccount'])->name('game.profile.delete');
 });
 
 Route::post('/game/login', [GameAuthController::class, 'login'])->name('game.login');

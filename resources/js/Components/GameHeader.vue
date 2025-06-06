@@ -10,7 +10,13 @@
                         group-hover:border-pink-500/50 group-hover:bg-purple-900/70
                         flex items-center justify-center overflow-hidden
                         transition-all duration-300">
-              <svg class="w-6 h-6 text-purple-300 group-hover:text-pink-300 transition-colors" 
+              <template v-if="userAvatar">
+                <img :src="userAvatar" 
+                     :alt="userName"
+                     class="w-full h-full object-cover">
+              </template>
+              <svg v-else 
+                   class="w-6 h-6 text-purple-300 group-hover:text-pink-300 transition-colors" 
                    fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
                       d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -19,10 +25,10 @@
             <!-- Nombre Usuario -->
             <div class="text-white group-hover:text-pink-500 transition-colors">
               <p class="font-game text-sm">
-                {{ $page.props.auth.user?.name || 'Guest' }}
+                {{ userName }}
               </p>
               <p class="text-xs text-gray-400 group-hover:text-pink-400/70">
-                {{ $page.props.auth.user?.email || 'Click para iniciar sesión' }}
+                {{ userEmail }}
               </p>
             </div>
           </div>
@@ -59,6 +65,14 @@
   
   <script setup>
   import { usePage } from '@inertiajs/vue3'
+  import { computed } from 'vue'
+
+  const page = usePage()
+  
+  const user = computed(() => page.props.auth.user)
+  const userAvatar = computed(() => user.value?.avatar)
+  const userName = computed(() => user.value?.name || 'Guest')
+  const userEmail = computed(() => user.value?.email || 'Click para iniciar sesión')
 
   defineProps({
     title: {

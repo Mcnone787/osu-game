@@ -300,6 +300,52 @@
             Volver al Menú
           </button>
         </div>
+
+        <!-- Ranking Global -->
+        <div class="mt-8 bg-white/5 backdrop-blur-sm rounded-2xl p-8 border border-white/10 results-stats-enter animate-delay-4">
+          <h3 class="text-2xl font-game mb-6 text-center">Ranking Global</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="text-gray-400 border-b border-white/10">
+                  <th class="py-2 text-left">#</th>
+                  <th class="py-2 text-left">Jugador</th>
+                  <th class="py-2 text-right">Puntuación</th>
+                  <th class="py-2 text-right">Precisión</th>
+                  <th class="py-2 text-right">Combo</th>
+                  <th class="py-2 text-right">Grado</th>
+                  <th class="py-2 text-right">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="ranking in rankings?.global || []" 
+                    :key="ranking.position"
+                    class="border-b border-white/5 hover:bg-white/5 transition-colors">
+                  <td class="py-3">#{{ ranking.position }}</td>
+                  <td class="py-3 flex items-center gap-2">
+                    <img :src="ranking.avatar" alt="Avatar" class="w-8 h-8 rounded-full">
+                    <span>{{ ranking.player }}</span>
+                  </td>
+                  <td class="py-3 text-right font-mono">{{ ranking.score.toLocaleString() }}</td>
+                  <td class="py-3 text-right">{{ ranking.accuracy.toFixed(2) }}%</td>
+                  <td class="py-3 text-right">{{ ranking.combo }}x</td>
+                  <td class="py-3 text-right">
+                    <span :class="{
+                      'text-yellow-400': ranking.grade === 'S',
+                      'text-purple-400': ranking.grade === 'A',
+                      'text-blue-400': ranking.grade === 'B',
+                      'text-green-400': ranking.grade === 'C',
+                      'text-red-400': ranking.grade === 'D'
+                    }">
+                      {{ ranking.grade }}
+                    </span>
+                  </td>
+                  <td class="py-3 text-right text-gray-400">{{ ranking.date }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -366,7 +412,8 @@ const feedbackTexts = {
 const isPaused = ref(false)
 
 // Añadir nueva variable para contar fallos por pulsaciones incorrectas
-const missedPresses = ref(0);
+const missedPresses = ref(0)
+const rankings = ref(null)
 
 // Variable para controlar los logs
 let lastLoggedTime = 0;
@@ -740,40 +787,37 @@ async function endGame() {
   // Actualizar precisión final
   updateAccuracy();
 
-  // Log del estado final
-  console.log('=== Debug Estado Final ===');
-  console.log('Puntuación final:', score.value);
-  console.log('Combo máximo:', maxCombo.value);
-  console.log('Precisión:', accuracy.value);
-  console.log('Notas perfectas:', notes.value.filter(n => n.hit && n.hitType === 'perfect').length);
-  console.log('Notas buenas:', notes.value.filter(n => n.hit && n.hitType === 'good').length);
-  console.log('Notas perdidas:', notes.value.filter(n => n.missed).length);
-  console.log('Pulsaciones incorrectas:', missedPresses.value);
+  try {
+    // Asegurarse de que la puntuación sea un número válido
+    const finalScore = Math.max(0, Math.floor(score.value));
+    console.log('Enviando puntuación al servidor:', finalScore);
+
+    // Guardar la puntuación
+    const saveResponse = await axios.post(route('game.rankings.save', { map: props.map.id }), {
+      score: finalScore,
+      max_combo: maxCombo.value,
+      accuracy: accuracy.value
+    });
+
+    if (saveResponse.data.success) {
+      console.log('Ranking guardado:', saveResponse.data.ranking);
+      console.log('Mensaje:', saveResponse.data.message);
+    }
+
+    // Cargar los rankings actualizados
+    const rankingsResponse = await axios.get(route('game.rankings', { map: props.map.id }));
+    rankings.value = rankingsResponse.data;
+    console.log('Rankings cargados:', rankings.value);
+
+  } catch (error) {
+    console.error('Error al guardar/cargar rankings:', error);
+  }
 
   // Esperar el tiempo configurado antes de mostrar los resultados
   await new Promise(resolve => setTimeout(resolve, RESULTS_DELAY));
   
   // Ahora sí mostrar la pantalla de resultados
   gameEnded.value = true;
-
-  try {
-    // Asegurarse de que la puntuación sea un número válido
-    const finalScore = Math.max(0, Math.floor(score.value));
-    console.log('Enviando puntuación al servidor:', finalScore);
-
-    const response = await axios.post(route('game.rankings.save', { map: props.map.id }), {
-      score: finalScore,
-      max_combo: maxCombo.value,
-      accuracy: accuracy.value
-    });
-
-    if (response.data.success) {
-      console.log('Ranking guardado:', response.data.ranking);
-      console.log('Mensaje:', response.data.message);
-    }
-  } catch (error) {
-    console.error('Error al guardar ranking:', error);
-  }
 }
 
 // Salir del juego
